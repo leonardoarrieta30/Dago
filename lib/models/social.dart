@@ -1,6 +1,6 @@
 class Social {
   final int id;
-  final String nombre;
+  String nombre;
   // final String icono;
   // final String url;
   final int personaId;
@@ -18,4 +18,12 @@ class Social {
         // icono = json['icono'],
         // url = json['url'],
         personaId = json['personaId'];
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nombre': nombre,
+      'personaId': personaId,
+    };
+  }
 }

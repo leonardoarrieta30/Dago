@@ -2,19 +2,19 @@ import 'package:dago_application/models/social.dart';
 
 class SocialResponse {
   final int status;
-  final Social? social; // Make user nullable by adding a question mark (?)
+  final List<Social>? socialNetworks;
   final String message;
 
   SocialResponse({
     required this.status,
-    this.social, // Update the parameter to be nullable
+    this.socialNetworks, // Update the parameter to be nullable
     required this.message,
   });
 
   SocialResponse.fromJson(Map<String, dynamic> json)
       : status = json['status'],
-        social = json['social'] != null
-            ? Social.fromJson(json['social'])
-            : null, // Check if json['social'] is not null before parsing
+        socialNetworks = (json['socials'] as List<dynamic>?)
+            ?.map((e) => Social.fromJson(e))
+            .toList(),
         message = json['message'];
 }

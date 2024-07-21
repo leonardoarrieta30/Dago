@@ -3,6 +3,7 @@ import 'package:dago_application/models/Person.dart';
 import 'package:dago_application/models/response/login_response.dart';
 import 'package:dago_application/models/response/sign_up_response.dart';
 import 'package:dago_application/models/response/social_response.dart';
+import 'package:dago_application/models/social.dart';
 import 'package:dago_application/models/user.dart';
 import 'package:http/http.dart' as http;
 
@@ -245,45 +246,169 @@ class HttpHelper {
     }
   }
 
-  Future<SocialResponse> actualizarRedSocial(
-      String nombre, int personId, int socialId) async {
-    final response = await http.patch(
-      Uri.parse('$urlBase/socials/$socialId'),
+  // Future<SocialResponse> actualizarRedSocial(
+  //     String nombre, int personId, int socialId) async {
+  //   final response = await http.patch(
+  //     Uri.parse('$urlBase/socials/$socialId'),
+  //     headers: <String, String>{
+  //       'Content-Type': 'application/json; charset=UTF-8',
+  //     },
+  //     body: jsonEncode(<String, dynamic>{
+  //       'nombre': nombre,
+  //       'personaId': personId,
+  //     }),
+  //   );
+  //   final Map<String, dynamic> data = json.decode(response.body);
+  //   if (response.statusCode == 200) {
+  //     return SocialResponse.fromJson({
+  //       'status': data['status'],
+  //       'social': data['social'],
+  //       'message': data['message'],
+  //     });
+  //   }
+  //   if (response.statusCode == 401) {
+  //     return SocialResponse.fromJson({
+  //       'status': data['status'],
+  //       'social': null,
+  //       'message': data['message'],
+  //     });
+  //   }
+  //   if (response.statusCode == 404) {
+  //     return SocialResponse.fromJson({
+  //       'status': data['status'],
+  //       'social': null,
+  //       'message': data['message'],
+  //     });
+  //   } else {
+  //     return SocialResponse.fromJson({
+  //       'status': -1,
+  //       'social': null,
+  //       'message': "Error se cayo el servidor",
+  //     });
+  //   }
+  // }
+
+  // Future<List<SocialResponse>> actualizarRedesSociales(
+  //     int personId, Map<String, String> socialNetworks) async {
+  //   List<SocialResponse> responses = [];
+
+  //   for (var entry in socialNetworks.entries) {
+  //     String networkName = entry.key;
+  //     String username = entry.value;
+
+  //     // Primero, intentamos obtener el ID de la red social existente
+  //     SocialResponse existingResponse =
+  //         await obtenerRedSocialPorNombre(networkName, personId);
+
+  //     if (existingResponse.status == 1 && existingResponse.social != null) {
+  //       // Si la red social ya existe, la actualizamos
+  //       SocialResponse updateResponse = await actualizarRedSocial(
+  //         username,
+  //         personId,
+  //         existingResponse.social!.id,
+  //       );
+  //       responses.add(updateResponse);
+  //     } else {
+  //       // Si la red social no existe, la creamos
+  //       SocialResponse createResponse = await crearRedSocial(
+  //         networkName,
+  //         username,
+  //         personId,
+  //       );
+  //       responses.add(createResponse);
+  //     }
+  //   }
+
+  //   return responses;
+  // }
+
+  // Future<SocialResponse> obtenerRedSocialPorNombre(
+  //     String nombre, int personId) async {
+  //   final response = await http.get(
+  //     Uri.parse('$urlBase/socials?nombre=$nombre&personaId=$personId'),
+  //     headers: <String, String>{
+  //       'Content-Type': 'application/json; charset=UTF-8',
+  //     },
+  //   );
+
+  //   final Map<String, dynamic> data = json.decode(response.body);
+  //   return SocialResponse.fromJson(data);
+  // }
+
+  // Future<SocialResponse> crearRedSocial(
+  //     String nombre, String username, int personId) async {
+  //   final response = await http.post(
+  //     Uri.parse('$urlBase/socials'),
+  //     headers: <String, String>{
+  //       'Content-Type': 'application/json; charset=UTF-8',
+  //     },
+  //     body: jsonEncode(<String, dynamic>{
+  //       'nombre': nombre,
+  //       'username': username,
+  //       'personaId': personId,
+  //     }),
+  //   );
+
+  //   final Map<String, dynamic> data = json.decode(response.body);
+  //   return SocialResponse.fromJson(data);
+  // }
+
+  Future<SocialResponse> actualizarRedesSociales(
+      int personaId, List<Social> socialNetworks) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$urlBase/socials'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'personaId': personaId,
+          'socialNetworks': socialNetworks
+              .map((network) => {
+                    'nombre': network.nombre,
+                    // 'url': network.url,
+                    // 'icono': network.icono,
+                    'personaId': network.personaId,
+                  })
+              .toList(),
+        }),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return SocialResponse.fromJson(jsonDecode(response.body));
+      } else {
+        throw Exception('Failed to update social networks: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Failed to update social networks: $e');
+    }
+  }
+
+  Future<SocialResponse> getRedesSociales(int personaId) async {
+    final response = await http.get(
+      Uri.parse('$urlBase/socials/$personaId'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
-      body: jsonEncode(<String, dynamic>{
-        'nombre': nombre,
-        'personaId': personId,
-      }),
     );
-    final Map<String, dynamic> data = json.decode(response.body);
+
     if (response.statusCode == 200) {
-      return SocialResponse.fromJson({
-        'status': data['status'],
-        'social': data['social'],
-        'message': data['message'],
-      });
-    }
-    if (response.statusCode == 401) {
-      return SocialResponse.fromJson({
-        'status': data['status'],
-        'social': null,
-        'message': data['message'],
-      });
-    }
-    if (response.statusCode == 404) {
-      return SocialResponse.fromJson({
-        'status': data['status'],
-        'social': null,
-        'message': data['message'],
-      });
+      return SocialResponse.fromJson(jsonDecode(response.body));
     } else {
-      return SocialResponse.fromJson({
-        'status': -1,
-        'social': null,
-        'message': "Error se cayo el servidor",
-      });
+      throw Exception('Failed to load social networks');
+    }
+  }
+
+  Future<SignUpResponse> eliminarRedSocial(int socialId) async {
+    final response = await http.delete(
+      Uri.parse('$urlBase/socials/$socialId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      return SignUpResponse.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to delete social network');
     }
   }
 }

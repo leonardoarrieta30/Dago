@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:dago_application/models/person.dart';
 import 'package:dago_application/models/response/sign_up_response.dart';
+import 'package:dago_application/models/social.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dago_application/data/remote/http_helper.dart';
 import 'package:dago_application/models/user.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -23,6 +25,9 @@ class _ProfilePageState extends State<ProfilePage> {
   TextEditingController jobTitleController = TextEditingController();
   TextEditingController bioController = TextEditingController();
   bool isEditing = false;
+  bool isEditingSocial = false;
+
+  List<Social> socialNetworks = [];
 
   @override
   void initState() {
@@ -32,6 +37,12 @@ class _ProfilePageState extends State<ProfilePage> {
     // jobTitleController = TextEditingController();
     // bioController = TextEditingController();
     _loadUsuario();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadSocialNetworks();
   }
 
   void _loadUsuario() async {
@@ -86,6 +97,7 @@ class _ProfilePageState extends State<ProfilePage> {
           jobTitleController.text = _person?.puestoTrabajo ?? '';
           bioController.text = _person?.descripcionPersonal ?? '';
         });
+        await _loadSocialNetworks();
       } else {
         // Si la persona no existe, NO creamos una nueva automáticamente
         // En su lugar, solo inicializamos _person como null
@@ -130,6 +142,13 @@ class _ProfilePageState extends State<ProfilePage> {
         .pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
   }
 
+  void _saveSocialNetworksLocally() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String socialNetworksJson =
+        jsonEncode(socialNetworks.map((s) => s.toJson()).toList());
+    await prefs.setString('social_networks', socialNetworksJson);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -148,7 +167,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   SizedBox(height: 20),
                   _buildBioSection(),
                   SizedBox(height: 20),
-                  _buildSocialSection(),
+                  if (_isBasicInfoComplete()) _buildSocialSection(),
                   SizedBox(height: 20),
                   _buildRecentActivitySection(),
                 ],
@@ -356,6 +375,10 @@ class _ProfilePageState extends State<ProfilePage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Información actualizada correctamente')),
             );
+            // Verificar si la información básica está completa
+            if (_isBasicInfoComplete() && socialNetworks.isEmpty) {
+              _addSocialNetwork();
+            }
           } else {
             print('Error al actualizar persona: ${updateResponse.message}');
             ScaffoldMessenger.of(context).showSnackBar(
@@ -395,6 +418,12 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       }
     });
+  }
+
+  bool _isBasicInfoComplete() {
+    return locationController.text.isNotEmpty ||
+        jobTitleController.text.isNotEmpty ||
+        bioController.text.isNotEmpty;
   }
 
   Widget _buildBioSection() {
@@ -460,6 +489,37 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _loadSocialNetworks() async {
+    if (_person == null) return;
+    try {
+      final response = await _httpHelper?.getRedesSociales(_person!.id);
+      if (response != null && response.status == 1) {
+        setState(() {
+          socialNetworks = response.socialNetworks ?? [];
+        });
+        _saveSocialNetworksLocally(); // Actualiza la caché local
+      } else {
+        // Si la API falla, intenta cargar desde la caché local
+        await _loadSocialNetworksFromLocal();
+      }
+    } catch (e) {
+      print('Error al cargar redes sociales: $e');
+      await _loadSocialNetworksFromLocal();
+    }
+  }
+
+  Future<void> _loadSocialNetworksFromLocal() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? socialNetworksJson = prefs.getString('social_networks');
+    if (socialNetworksJson != null) {
+      List<dynamic> decodedList = jsonDecode(socialNetworksJson);
+      setState(() {
+        socialNetworks =
+            decodedList.map((item) => Social.fromJson(item)).toList();
+      });
+    }
+  }
+
   Widget _buildSocialSection() {
     return Card(
       elevation: 2,
@@ -468,27 +528,179 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Social',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFA0522D))),
-            SizedBox(height: 10),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.flutter_dash, size: 20, color: Color(0xFF5A9BD5)),
-                SizedBox(width: 5),
-                Text('@johndoe', style: TextStyle(color: Color(0xFF6C757D))),
-                SizedBox(width: 20),
-                Icon(Icons.link, size: 20, color: Color(0xFF5A9BD5)),
-                SizedBox(width: 5),
-                Text('John Doe', style: TextStyle(color: Color(0xFF6C757D))),
+                Text('Redes Sociales',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFA0522D))),
+                TextButton(
+                  onPressed: () {
+                    if (isEditingSocial) {
+                      _updateSocialInfo();
+                    } else {
+                      setState(() {
+                        isEditingSocial = true;
+                      });
+                    }
+                  },
+                  child: Text(
+                    isEditingSocial ? 'Guardar' : 'Editar',
+                    style: TextStyle(color: Color(0xFF28A745)),
+                  ),
+                ),
               ],
             ),
+            SizedBox(height: 10),
+            ...socialNetworks.map((network) => _buildSocialMediaRow(network)),
+            if (isEditingSocial)
+              ElevatedButton(
+                onPressed: _addSocialNetwork,
+                child: Text('Agregar Red Social'),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildSocialMediaRow(Social network) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(Icons.link, size: 20, color: Color(0xFF5A9BD5)),
+            onPressed: () => _launchURL(network.nombre),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: isEditingSocial
+                ? TextField(
+                    controller: TextEditingController(text: network.nombre),
+                    onChanged: (value) => network.nombre = value,
+                    decoration: InputDecoration(
+                      hintText: 'Nombre/URL de la red social',
+                      border: OutlineInputBorder(),
+                    ),
+                  )
+                : Text(
+                    network.nombre,
+                    style: TextStyle(color: Color(0xFF6C757D)),
+                  ),
+          ),
+          if (isEditingSocial)
+            IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: () => _removeSocialNetwork(network),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchURL(String url) async {
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se proporcionó una URL válida')),
+      );
+      return;
+    }
+
+    // Añadir 'https://' si no está presente
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://$url';
+    }
+
+    // ignore: deprecated_member_use
+    if (await canLaunch(url)) {
+      // ignore: deprecated_member_use
+      await launch(url);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo abrir el enlace')),
+      );
+    }
+  }
+
+  void _addSocialNetwork() {
+    setState(() {
+      socialNetworks.add(Social(
+          id: 0,
+          nombre: '',
+          personaId: 0)); // El personaId se asignará en el backend
+    });
+  }
+
+  void _removeSocialNetwork(Social network) async {
+    try {
+      final response = await _httpHelper?.eliminarRedSocial(network.id);
+
+      if (response != null && response.status == 1) {
+        setState(() {
+          socialNetworks.remove(network);
+        });
+        _saveSocialNetworksLocally();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Red social eliminada correctamente')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Error al eliminar la red social: ${response?.message ?? 'Unknown error'}')),
+        );
+      }
+    } catch (e) {
+      print('Error al eliminar la red social: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al eliminar la red social')),
+      );
+    }
+  }
+
+  void _updateSocialInfo() {
+    if (_user == null) {
+      print('Error: User is null');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: Información de usuario no disponible')),
+      );
+      return;
+    }
+
+    // Filtrar redes sociales vacías
+    socialNetworks =
+        socialNetworks.where((network) => network.nombre.isNotEmpty).toList();
+
+    // Actualizar redes sociales
+    _httpHelper
+        ?.actualizarRedesSociales(
+      _user!.id, // Usar el ID del usuario en lugar del ID de la persona
+      socialNetworks,
+    )
+        .then((response) {
+      if (response.status == 1) {
+        print('Redes sociales actualizadas correctamente');
+        setState(() {
+          isEditingSocial = false;
+          socialNetworks = response.socialNetworks ?? [];
+        });
+        _saveSocialNetworksLocally();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Redes sociales actualizadas correctamente')),
+        );
+        _loadSocialNetworks();
+      } else {
+        print('Error al actualizar redes sociales: ${response.message}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Error al actualizar redes sociales: ${response.message}')),
+        );
+      }
+    });
   }
 
   Widget _buildRecentActivitySection() {
