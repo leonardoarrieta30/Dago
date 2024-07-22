@@ -138,6 +138,7 @@ class HttpHelper {
     String puesto_trabajo,
     String descripcion_personal,
     int usuario_id,
+    String base64Image,
   ) async {
     final response = await http.post(
       Uri.parse('$urlBase/personas'),
@@ -148,12 +149,19 @@ class HttpHelper {
         'locacion': locacion,
         'puesto_trabajo': puesto_trabajo,
         'descripcion_personal': descripcion_personal,
-        'foto_perfil': 'photo.png',
+        'foto_perfil': base64Image,
         'usuarioId': usuario_id,
       }),
     );
     final Map<String, dynamic> data = json.decode(response.body);
     print(data['persona']);
+    if (response.statusCode == 200) {
+      return SignUpResponse.fromJson({
+        'status': data['status'],
+        'persona': data['persona'],
+        'message': data['message'],
+      });
+    }
     if (response.statusCode == 201) {
       return SignUpResponse.fromJson({
         'status': data['status'],
@@ -161,7 +169,7 @@ class HttpHelper {
         'message': data['message'],
       });
     }
-    if (response.statusCode == 401) {
+    if (response.statusCode == 400) {
       return SignUpResponse.fromJson({
         'status': data['status'],
         'persona': null,
@@ -182,47 +190,60 @@ class HttpHelper {
     String descripcion_personal,
     int usuario_id,
     int personaId,
+    String base64Image,
   ) async {
-    final response = await http.patch(
-      Uri.parse('$urlBase/personas/$personaId'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'locacion': locacion,
-        'puesto_trabajo': puesto_trabajo,
-        'descripcion_personal': descripcion_personal,
-        'foto_perfil': 'photo.png',
-        'usuarioId': usuario_id,
-      }),
-    );
-    final Map<String, dynamic> data = json.decode(response.body);
-    print(data['persona']);
-    if (response.statusCode == 200) {
-      return SignUpResponse.fromJson({
-        'status': data['status'],
-        'persona': data['persona'],
-        'message': data['message'],
-      });
-    }
-    if (response.statusCode == 401) {
-      return SignUpResponse.fromJson({
-        'status': data['status'],
-        'persona': null,
-        'message': data['message'],
-      });
-    }
-    if (response.statusCode == 404) {
-      return SignUpResponse.fromJson({
-        'status': data['status'],
-        'persona': null,
-        'message': data['message'],
-      });
-    } else {
+    try {
+      print('Enviando solicitud para actualizar persona...');
+      print('URL: ${Uri.parse('$urlBase/personas/$personaId')}');
+
+      final response = await http.patch(
+        Uri.parse('$urlBase/personas/$personaId'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'locacion': locacion,
+          'puesto_trabajo': puesto_trabajo,
+          'descripcion_personal': descripcion_personal,
+          'foto_perfil': base64Image,
+          'usuarioId': usuario_id,
+        }),
+      );
+
+      print('Código de estado de la respuesta: ${response.statusCode}');
+      print('Cuerpo de la respuesta: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        try {
+          final Map<String, dynamic> data = json.decode(response.body);
+          print('Datos decodificados: $data');
+          return SignUpResponse.fromJson({
+            'status': data['status'],
+            'persona': data['persona'],
+            'message': data['message'],
+          });
+        } catch (e) {
+          print('Error al decodificar JSON: $e');
+          return SignUpResponse.fromJson({
+            'status': -1,
+            'persona': null,
+            'message': "Error al procesar la respuesta del servidor",
+          });
+        }
+      } else {
+        print('Respuesta no exitosa. Código: ${response.statusCode}');
+        return SignUpResponse.fromJson({
+          'status': -1,
+          'persona': null,
+          'message': "Error del servidor: ${response.statusCode}",
+        });
+      }
+    } catch (e) {
+      print('Excepción al actualizar persona: $e');
       return SignUpResponse.fromJson({
         'status': -1,
         'persona': null,
-        'message': "Error se cayo el servidor",
+        'message': "Error de red o del servidor: $e",
       });
     }
   }

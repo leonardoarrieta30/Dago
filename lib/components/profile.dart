@@ -3,10 +3,14 @@ import 'package:dago_application/models/person.dart';
 import 'package:dago_application/models/response/sign_up_response.dart';
 import 'package:dago_application/models/social.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dago_application/data/remote/http_helper.dart';
 import 'package:dago_application/models/user.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
+import 'package:image/image.dart' as img;
+import 'dart:typed_data';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -28,6 +32,9 @@ class _ProfilePageState extends State<ProfilePage> {
   bool isEditingSocial = false;
 
   List<Social> socialNetworks = [];
+
+  File? _image;
+  String base64Image = '';
 
   @override
   void initState() {
@@ -96,6 +103,11 @@ class _ProfilePageState extends State<ProfilePage> {
           locationController.text = _person?.locacion ?? '';
           jobTitleController.text = _person?.puestoTrabajo ?? '';
           bioController.text = _person?.descripcionPersonal ?? '';
+
+          if (_person?.foto_perfil != null && _person!.foto_perfil.isNotEmpty) {
+            base64Image = _person!.foto_perfil;
+            _image = File(''); // Creamos un archivo vacío
+          }
         });
         await _loadSocialNetworks();
       } else {
@@ -119,6 +131,115 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       }
     }
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? pickedFile =
+        await _picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+
+      // Convertir la imagen a base64
+      base64Image = await compressAndEncodeImage(_image!);
+
+      // Actualizar la persona con la nueva imagen
+      _updateUserInfoWithImage(base64Image);
+    }
+  }
+
+  Future<String> compressAndEncodeImage(File imageFile) async {
+    Uint8List imageBytes = await imageFile.readAsBytes();
+    img.Image image = img.decodeImage(imageBytes)!;
+
+    img.Image compressedImage = img.copyResize(image,
+        width: 800); // Ajusta el ancho según tus necesidades
+
+    List<int> compressedBytes = img.encodeJpg(compressedImage,
+        quality: 85); // Ajusta la calidad según tus necesidades
+
+    return base64Encode(compressedBytes);
+  }
+
+  void _updateUserInfoWithImage(String base64Image) {
+    if (_user == null) {
+      print('Error: User is null');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: Información de usuario no disponible')),
+      );
+      return;
+    }
+
+    // Primero, verificamos si ya existe una persona para este usuario
+    _httpHelper?.getPersonaByUserId(_user!.id).then((response) {
+      if (response.status == 1 && response.persona != null) {
+        // Si la persona existe, actualizamos la información existente
+        _httpHelper
+            ?.actualizarPersona(
+          locationController.text,
+          jobTitleController.text,
+          bioController.text,
+          _user!.id,
+          response.persona!.id,
+          base64Image, // Añadimos la imagen en base64
+        )
+            .then((updateResponse) {
+          if (updateResponse.status == 1) {
+            print('Persona actualizada correctamente');
+            setState(() {
+              _person = updateResponse.persona;
+              isEditing = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Información actualizada correctamente')),
+            );
+            // Verificar si la información básica está completa
+            if (_isBasicInfoComplete() && socialNetworks.isEmpty) {
+              _addSocialNetwork();
+            }
+          } else {
+            print('Error al actualizar persona: ${updateResponse.message}');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(
+                      'Error al actualizar la información: ${updateResponse.message}')),
+            );
+          }
+        });
+      } else {
+        // Si la persona no existe, creamos una nueva
+        _httpHelper
+            ?.registrarPersona(
+          locationController.text,
+          jobTitleController.text,
+          bioController.text,
+          _user!.id,
+          base64Image, // Añadimos la imagen en base64
+        )
+            .then((createResponse) {
+          if (createResponse.status == 1) {
+            print('Nueva persona creada correctamente');
+            setState(() {
+              _person = createResponse.persona;
+              isEditing = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Información creada correctamente')),
+            );
+          } else {
+            print('Error al crear persona: ${createResponse.message}');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text(
+                      'Error al crear la información: ${createResponse.message}')),
+            );
+          }
+        });
+      }
+    });
   }
 
   String _getAge() {
@@ -168,8 +289,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildBioSection(),
                   SizedBox(height: 20),
                   if (_isBasicInfoComplete()) _buildSocialSection(),
-                  SizedBox(height: 20),
-                  _buildRecentActivitySection(),
+                  // SizedBox(height: 20),
+                  // _buildRecentActivitySection(),
                 ],
               ),
             ),
@@ -189,11 +310,39 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.white,
-                    child:
-                        Icon(Icons.person, size: 50, color: Color(0xFF6C757D)),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.white,
+                          backgroundImage: _getProfileImage(),
+                          child: _getProfileImage() == null
+                              ? Icon(Icons.person,
+                                  size: 50, color: Color(0xFF6C757D))
+                              : null,
+                        ),
+                        if (_getProfileImage() == null)
+                          Positioned(
+                            bottom: 0,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                'Subir foto',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 10),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                   SizedBox(width: 15),
                   Expanded(
@@ -229,6 +378,32 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
     );
+  }
+
+  ImageProvider? _getProfileImage() {
+    if (_image != null && _image!.existsSync()) {
+      return FileImage(_image!);
+    } else if (base64Image.isNotEmpty) {
+      try {
+        return MemoryImage(base64Decode(base64Image));
+      } catch (e) {
+        print('Error decoding base64Image: $e');
+      }
+    } else if (_person?.foto_perfil != null &&
+        _person!.foto_perfil.isNotEmpty) {
+      try {
+        return MemoryImage(base64Decode(_person!.foto_perfil));
+      } catch (e) {
+        print('Error decoding _person.foto_perfil: $e');
+      }
+    }
+    return null;
+  }
+
+  bool _showDefaultIcon() {
+    return _image == null &&
+        base64Image.isEmpty &&
+        (_person?.foto_perfil == null || _person!.foto_perfil.isEmpty);
   }
 
   Widget buildAboutSection() {
@@ -364,6 +539,7 @@ class _ProfilePageState extends State<ProfilePage> {
           bioController.text,
           _user!.id,
           response.persona!.id,
+          base64Image.isEmpty ? response.persona!.foto_perfil : base64Image,
         )
             .then((updateResponse) {
           if (updateResponse.status == 1) {
@@ -396,6 +572,7 @@ class _ProfilePageState extends State<ProfilePage> {
           jobTitleController.text,
           bioController.text,
           _user!.id,
+          base64Image,
         )
             .then((createResponse) {
           if (createResponse.status == 1) {

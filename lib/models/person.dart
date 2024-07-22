@@ -5,7 +5,7 @@ class Person {
   String locacion;
   String puestoTrabajo;
   String descripcionPersonal;
-  // final Blob foto_perfil;
+  final String foto_perfil;
   final int usuarioId;
 
   Person(
@@ -13,6 +13,7 @@ class Person {
       required this.locacion,
       required this.puestoTrabajo,
       required this.descripcionPersonal,
+      required this.foto_perfil,
       required this.usuarioId});
 
   Person.fromJson(Map<String, dynamic> json)
@@ -20,6 +21,6 @@ class Person {
         locacion = json['locacion'],
         puestoTrabajo = json['puesto_trabajo'],
         descripcionPersonal = json['descripcion_personal'],
-        // foto_perfil = json['foto_perfil'],
+        foto_perfil = json['foto_perfil'],
         usuarioId = json['usuarioId'];
 }
