@@ -5,6 +5,7 @@ import 'package:dago_application/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -62,12 +63,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent, // o cualquier color que prefieras
+      statusBarIconBrightness: Brightness.dark, // para iconos oscuros
+    ));
     return Scaffold(
       backgroundColor: Color(0xFFE9ECEF),
       appBar: AppBar(
         elevation: 0,
         automaticallyImplyLeading: false, // Esto quita el botón de retroceso
         toolbarHeight: 0, // Esto hace que el AppBar sea invisible
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
       body: SingleChildScrollView(
         child: Padding(

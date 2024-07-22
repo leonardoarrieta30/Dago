@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'package:image/image.dart' as img;
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -272,8 +273,18 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent, // o cualquier color que prefieras
+      statusBarIconBrightness: Brightness.dark, // para iconos oscuros
+    ));
     return Scaffold(
       backgroundColor: Color(0xFFE9ECEF),
+      appBar: AppBar(
+        elevation: 0,
+        automaticallyImplyLeading: false, // Esto quita el botón de retroceso
+        toolbarHeight: 0, // Esto hace que el AppBar sea invisible
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
