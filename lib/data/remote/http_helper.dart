@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:dago_application/models/Person.dart';
+import 'package:dago_application/models/response/docu_response.dart';
 import 'package:dago_application/models/response/login_response.dart';
 import 'package:dago_application/models/response/sign_up_response.dart';
 import 'package:dago_application/models/response/social_response.dart';
 import 'package:dago_application/models/social.dart';
 import 'package:dago_application/models/user.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class HttpHelper {
   final String urlBase = 'http://192.168.18.7:8080/api/v1';
@@ -430,6 +432,28 @@ class HttpHelper {
       return SignUpResponse.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to delete social network');
+    }
+  }
+
+  Future<DocuResponse> crearDocumento(
+      String titulo, String docuBase64, int usuarioId) async {
+    final response = await http.post(
+      Uri.parse('$urlBase/documentos'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, dynamic>{
+        'titulo': titulo,
+        'documento_base64': docuBase64,
+        "fecha_subida": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        'usuarioId': usuarioId,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return DocuResponse.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to create document');
     }
   }
 }
