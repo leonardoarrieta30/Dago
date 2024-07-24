@@ -1,4 +1,3 @@
-
 import 'package:dago_application/models/document.dart';
 
 class DocuResponse {

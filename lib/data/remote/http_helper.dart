@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:dago_application/components/upload_file.dart';
 import 'package:dago_application/models/Person.dart';
+import 'package:dago_application/models/document.dart';
 import 'package:dago_application/models/response/docu_response.dart';
 import 'package:dago_application/models/response/login_response.dart';
 import 'package:dago_application/models/response/sign_up_response.dart';
@@ -454,6 +456,40 @@ class HttpHelper {
       return DocuResponse.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to create document');
+    }
+  }
+
+  Future<List<Document>> getDocumentosByUserId(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$urlBase/documentos/usuario/$userId'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+      );
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        print("todavia no entra");
+        if (jsonResponse['status'] == 1) {
+          print("entro");
+          List<dynamic> documentos = jsonResponse['documento'];
+          print('Response body2: $documentos');
+          return documentos.map((json) => Document.fromJson(json)).toList();         
+        } else {
+          print('No se encontraron documentos: ${jsonResponse['message']}');
+          return [];
+        }
+      } else {
+        print('Failed to load documents. Status code: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Error in getDocumentosByUserId: $e');
+      return [];
     }
   }
 }

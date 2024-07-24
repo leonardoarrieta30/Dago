@@ -1,4 +1,5 @@
 import 'package:dago_application/data/remote/http_helper.dart';
+import 'package:dago_application/models/document.dart';
 import 'package:dago_application/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +35,9 @@ class _UploadFileState extends State<UploadFile> {
   List<ImageWithDescription> _images = [];
   User? _user;
   String? _generatedPDFPath;
+  // List<Document>? _recentPDFs;
+  bool _isLoading = true;
+  bool _isGeneratingPDF = false;
 
   // Paleta de colores
   final Color primaryColor = Color(0xFF007BFF);
@@ -50,24 +54,79 @@ class _UploadFileState extends State<UploadFile> {
     // locationController = TextEditingController();
     // jobTitleController = TextEditingController();
     // bioController = TextEditingController();
-    _loadUsuario();
+    _loadData();
   }
 
-  void _loadUsuario() async {
+  // Future<void> _clearCache() async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   await prefs.remove('cached_docs');
+  // }
+
+  // Future<void> _loadRecentPDFs() async {
+  //   if (_user != null && _httpHelper != null) {
+  //     try {
+  //       SharedPreferences prefs = await SharedPreferences.getInstance();
+  //       String? cachedDocs = prefs.getString('cached_docs');
+
+  //       if (cachedDocs != null) {
+  //         // Si hay documentos en caché, úsalos
+  //         List<dynamic> decodedDocs = jsonDecode(cachedDocs);
+  //         _recentPDFs =
+  //             decodedDocs.map((doc) => Document.fromJson(doc)).toList();
+  //         print('Loaded ${_recentPDFs?.length} PDFs from cache');
+  //       } else {
+  //         // Si no hay caché, carga desde la API
+  //         print('Loading PDFs for user ID: ${_user!.id}');
+  //         final recentDocs =
+  //             await _httpHelper!.getDocumentosByUserId(_user!.id);
+  //         _recentPDFs = recentDocs;
+  //         print('Loaded ${_recentPDFs?.length} PDFs from API');
+
+  //         // Guarda los documentos en caché
+  //         await prefs.setString('cached_docs', jsonEncode(_recentPDFs));
+  //       }
+  //     } catch (e) {
+  //       print('Error al cargar PDFs recientes: $e');
+  //     }
+  //   } else {
+  //     print('User or httpHelper is null');
+  //   }
+  // }
+
+  Future<void> _loadUsuario() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? usuarioJson = prefs.getString('usuario');
     if (usuarioJson != null) {
       setState(() {
         _user = User.fromJson(jsonDecode(usuarioJson));
-        print(_user?.id);
       });
     } else {
       print('No hay usuario');
     }
   }
 
+  Future<void> _loadData() async {
+    if (!mounted)
+      return; // Verificar si el widget está montado antes de continuar
+
+    setState(() => _isLoading = true);
+    await _loadUsuario();
+    // if (_user != null) {
+    //   print(_user?.id);
+    //   await _loadRecentPDFs();
+    // }
+
+    if (mounted) {
+      // Verificar nuevamente si el widget está montado antes de llamar a setState
+      setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
     Future<void> _showDescriptionDialog(ImageWithDescription image) async {
       String? newDescription = await showDialog<String>(
         context: context,
@@ -173,76 +232,93 @@ class _UploadFileState extends State<UploadFile> {
         );
         return null;
       }
+      setState(() => _isGeneratingPDF = true);
+      try {
+        String? pdfTitle = await _getPDFTitle();
+        if (pdfTitle == null) return null; // El usuario canceló la operación
 
-      String? pdfTitle = await _getPDFTitle();
-      if (pdfTitle == null) return null; // El usuario canceló la operación
+        final pdf = pw.Document();
+        final font = await PdfGoogleFonts.nunitoRegular();
+        final boldFont = await PdfGoogleFonts.nunitoBold();
 
-      final pdf = pw.Document();
-
-      // Agrega una página de título
-      pdf.addPage(
-        pw.Page(
-          build: (pw.Context context) {
-            return pw.Center(
-              child: pw.Text(
-                pdfTitle,
-                style:
-                    pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
-              ),
-            );
-          },
-        ),
-      );
-
-      for (var imageWithDesc in _images) {
-        final imageFile = await imageWithDesc.image.readAsBytes();
-        final pdfImage = pw.MemoryImage(imageFile);
-
+        // Agrega una página de título
         pdf.addPage(
           pw.Page(
             build: (pw.Context context) {
-              return pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                mainAxisAlignment: pw.MainAxisAlignment.center,
-                children: [
-                  pw.Image(pdfImage, height: 500),
-                  pw.SizedBox(height: 10),
-                  pw.Text(imageWithDesc.description),
-                ],
+              return pw.Center(
+                child: pw.Text(
+                  pdfTitle,
+                  style: pw.TextStyle(font: boldFont, fontSize: 24),
+                ),
               );
             },
           ),
         );
-      }
 
-      // Solicitar permiso de almacenamiento
-      var status = await Permission.storage.status;
-      if (!status.isGranted) {
-        await Permission.storage.request();
-      }
+        for (var imageWithDesc in _images) {
+          final imageFile = await imageWithDesc.image.readAsBytes();
+          final pdfImage = pw.MemoryImage(imageFile);
 
-      // Obtener el directorio de documentos
-      final output = await getExternalStorageDirectory();
-      if (output == null) {
+          pdf.addPage(
+            pw.Page(
+              build: (pw.Context context) {
+                return pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  children: [
+                    pw.Image(pdfImage, height: 500),
+                    pw.SizedBox(height: 10),
+                    pw.Text(imageWithDesc.description),
+                  ],
+                );
+              },
+            ),
+          );
+        }
+
+        // Solicitar permiso de almacenamiento
+        var status = await Permission.storage.status;
+        if (!status.isGranted) {
+          await Permission.storage.request();
+        }
+
+        // Obtener el directorio de documentos
+        final output = await getExternalStorageDirectory();
+        if (output == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo acceder al almacenamiento')),
+          );
+          return null;
+        }
+
+        final file = File("${output.path}/$pdfTitle.pdf");
+        await file.writeAsBytes(await pdf.save());
+
+        // Almacenar la ruta del PDF generado
+        setState(() {
+          _generatedPDFPath = file.path;
+          // _recentPDFs.insert(
+          //     0,
+          //     RecentPDF(
+          //       id: DateTime.now()
+          //           .millisecondsSinceEpoch, // Esto es solo un ejemplo, idealmente deberías usar un ID único
+          //       titulo: pdfTitle,
+          //       documentoBase64: base64Encode(file.readAsBytesSync()),
+          //       fechaSubida: DateTime.now(),
+          //     ));
+          // if (_recentPDFs.length > 5) {
+          //   _recentPDFs.removeLast(); // Mantener solo los 5 más recientes
+          // }
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo acceder al almacenamiento')),
+          SnackBar(content: Text('PDF generado: ${file.path}')),
         );
-        return null;
+
+        return file.path;
+      } finally {
+        setState(() => _isGeneratingPDF = false);
       }
-
-      final file = File("${output.path}/$pdfTitle.pdf");
-      await file.writeAsBytes(await pdf.save());
-
-      // Almacenar la ruta del PDF generado
-      setState(() {
-        _generatedPDFPath = file.path;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF generado: ${file.path}')),
-      );
-
-      return file.path;
     }
 
     Future<void> _sharePDF() async {
@@ -261,14 +337,26 @@ class _UploadFileState extends State<UploadFile> {
       String fileName = basename(filePath);
 
       try {
-        _httpHelper?.crearDocumento(fileName, base64PDF, _user!.id);
+        final docuResponse =
+            await _httpHelper?.crearDocumento(fileName, base64PDF, _user!.id);
+        if (docuResponse != null && docuResponse.documento != null) {
+          // setState(() {
+          //   _recentPDFs?.insert(0, docuResponse.documento!);
+          //   if (_recentPDFs!.length > 5) {
+          //     _recentPDFs?.removeLast();
+          //   }
+          // });
+
+          // // Actualiza la caché
+          // SharedPreferences prefs = await SharedPreferences.getInstance();
+          // await prefs.setString('cached_docs', jsonEncode(_recentPDFs));
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF guardado en la base de datos')),
+          SnackBar(content: Text('PDF guardado en la base de datos y caché')),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Error al guardar el PDF en la base de datos: $e')),
+          SnackBar(content: Text('Error al guardar el PDF: $e')),
         );
       }
     }
@@ -441,13 +529,17 @@ class _UploadFileState extends State<UploadFile> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   ElevatedButton(
-                    child: Text('Generar PDF'),
-                    onPressed: () async {
-                      String? filePath = await _generateAndSharePDF();
-                      if (filePath != null) {
-                        await _savePDFToDatabase(filePath);
-                      }
-                    },
+                    child: _isGeneratingPDF
+                        ? CircularProgressIndicator(color: Colors.white)
+                        : Text('Generar PDF'),
+                    onPressed: _isGeneratingPDF
+                        ? null
+                        : () async {
+                            String? filePath = await _generateAndSharePDF();
+                            if (filePath != null) {
+                              await _savePDFToDatabase(filePath);
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       primary: accentColor,
                       onPrimary: Colors.white,
@@ -474,6 +566,44 @@ class _UploadFileState extends State<UploadFile> {
                     ),
                 ],
               ),
+              SizedBox(height: 30),
+              // if (_recentPDFs!.isNotEmpty) ...[
+              //   Text(
+              //     'PDFs Recientes',
+              //     style: TextStyle(
+              //       fontSize: 20,
+              //       fontWeight: FontWeight.bold,
+              //       color: primaryColor,
+              //     ),
+              //   ),
+              //   SizedBox(height: 10),
+              //   ListView.builder(
+              //     shrinkWrap: true,
+              //     physics: NeverScrollableScrollPhysics(),
+              //     itemCount: _recentPDFs?.length,
+              //     itemBuilder: (context, index) {
+              //       final document = _recentPDFs?[index];
+              //       return ListTile(
+              //         title: Text(document!.titulo),
+              //         subtitle: Text(DateFormat('dd/MM/yyyy')
+              //             .format(document.fechaSubida)),
+              //         leading: Icon(Icons.picture_as_pdf, color: accentColor),
+              //         // trailing: document.estadoDocumento != null
+              //         //     ? Text(document.estadoDocumento!)
+              //         //     : null,
+              //         onTap: () {
+              //           // Implementar acción para abrir o descargar el PDF
+              //           print('Abrir PDF: ${document.titulo}');
+              //         },
+              //       );
+              //     },
+              //   ),
+              // ] else if (!_isLoading) ...[
+              //   Text(
+              //     'No hay PDFs recientes',
+              //     style: TextStyle(fontSize: 16, color: textColor),
+              //   ),
+              // ],
             ],
           ),
         ),
@@ -562,5 +692,30 @@ class ImageWithDescription {
 
   void updateDescription(String newDescription) {
     description = newDescription;
+  }
+}
+
+class RecentPDF {
+  final int id;
+  final String titulo;
+  final String documentoBase64;
+  final DateTime fechaSubida;
+  final String? estadoDocumento;
+
+  RecentPDF({
+    required this.id,
+    required this.titulo,
+    required this.documentoBase64,
+    required this.fechaSubida,
+    this.estadoDocumento,
+  });
+  factory RecentPDF.fromJson(Map<String, dynamic> json) {
+    return RecentPDF(
+      id: json['id'],
+      titulo: json['titulo'],
+      documentoBase64: json['documento_base64'],
+      fechaSubida: DateTime.parse(json['fecha_subida']),
+      estadoDocumento: json['estado_documento'],
+    );
   }
 }
