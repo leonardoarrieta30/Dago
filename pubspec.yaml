@@ -23,6 +23,7 @@ dependencies:
   share_plus: ^7.2.2
   permission_handler: ^11.3.1
   flutter_archive: ^6.0.3
+  open_file: ^3.3.2
 
 dev_dependencies:
   flutter_test:

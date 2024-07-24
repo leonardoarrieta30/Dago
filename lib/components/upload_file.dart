@@ -26,6 +26,9 @@ class UploadFile extends StatefulWidget {
 }
 
 class _UploadFileState extends State<UploadFile> {
+  final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
+      GlobalKey<ScaffoldMessengerState>();
+
   List<UploadedFile> recentUploads = [
     UploadedFile('Annual Report 2022.pdf', '2 days ago'),
     UploadedFile('Marketing Presentation.pdf', '1 week ago'),
@@ -168,9 +171,9 @@ class _UploadFileState extends State<UploadFile> {
       }
     }
 
-    Future<void> _takePicture() async {
+    Future<void> _takePicture(ImageSource source) async {
       final ImagePicker _picker = ImagePicker();
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+      final XFile? photo = await _picker.pickImage(source: source);
 
       if (photo != null) {
         final newImage = ImageWithDescription(File(photo.path));
@@ -226,16 +229,38 @@ class _UploadFileState extends State<UploadFile> {
     }
 
     Future<String?> _generateAndSharePDF() async {
+      if (!mounted) return null; // Verifica si el widget aún está montado
       if (_images.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _scaffoldKey.currentState?.showSnackBar(
+          // Usa _scaffoldKey en lugar de ScaffoldMessenger.of(context)
           SnackBar(content: Text('No hay fotos para generar el PDF')),
         );
         return null;
       }
+      if (!mounted)
+        return null; // Verifica nuevamente después de mostrar el SnackBar
       setState(() => _isGeneratingPDF = true);
+
       try {
         String? pdfTitle = await _getPDFTitle();
         if (pdfTitle == null) return null; // El usuario canceló la operación
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text("Generando PDF..."),
+                ],
+              ),
+            );
+          },
+        );
 
         final pdf = pw.Document();
         final font = await PdfGoogleFonts.nunitoRegular();
@@ -295,29 +320,42 @@ class _UploadFileState extends State<UploadFile> {
         await file.writeAsBytes(await pdf.save());
 
         // Almacenar la ruta del PDF generado
-        setState(() {
-          _generatedPDFPath = file.path;
-          // _recentPDFs.insert(
-          //     0,
-          //     RecentPDF(
-          //       id: DateTime.now()
-          //           .millisecondsSinceEpoch, // Esto es solo un ejemplo, idealmente deberías usar un ID único
-          //       titulo: pdfTitle,
-          //       documentoBase64: base64Encode(file.readAsBytesSync()),
-          //       fechaSubida: DateTime.now(),
-          //     ));
-          // if (_recentPDFs.length > 5) {
-          //   _recentPDFs.removeLast(); // Mantener solo los 5 más recientes
-          // }
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (mounted) {
+          setState(() {
+            _generatedPDFPath = file.path;
+            // _recentPDFs.insert(
+            //     0,
+            //     RecentPDF(
+            //       id: DateTime.now()
+            //           .millisecondsSinceEpoch, // Esto es solo un ejemplo, idealmente deberías usar un ID único
+            //       titulo: pdfTitle,
+            //       documentoBase64: base64Encode(file.readAsBytesSync()),
+            //       fechaSubida: DateTime.now(),
+            //     ));
+            // if (_recentPDFs.length > 5) {
+            //   _recentPDFs.removeLast(); // Mantener solo los 5 más recientes
+            // }
+          });
+        }
+        Navigator.of(context).pop();
+        _scaffoldKey.currentState?.showSnackBar(
+          // Usa _scaffoldKey
           SnackBar(content: Text('PDF generado: ${file.path}')),
         );
 
         return file.path;
+      } catch (e) {
+        Navigator.of(context).pop();
+        _scaffoldKey.currentState?.showSnackBar(
+          // Usa _scaffoldKey
+          SnackBar(content: Text('Error al generar el PDF: $e')),
+        );
+        return null;
       } finally {
-        setState(() => _isGeneratingPDF = false);
+        if (mounted) {
+          // Verifica si el widget aún está montado antes de llamar a setState
+          setState(() => _isGeneratingPDF = false);
+        }
       }
     }
 
@@ -332,6 +370,7 @@ class _UploadFileState extends State<UploadFile> {
     }
 
     Future<void> _savePDFToDatabase(String filePath) async {
+      if (!mounted) return; // Añade esta línea
       final file = File(filePath);
       String base64PDF = base64Encode(file.readAsBytesSync());
       String fileName = basename(filePath);
@@ -351,11 +390,11 @@ class _UploadFileState extends State<UploadFile> {
           // SharedPreferences prefs = await SharedPreferences.getInstance();
           // await prefs.setString('cached_docs', jsonEncode(_recentPDFs));
         }
-        ScaffoldMessenger.of(context).showSnackBar(
+        _scaffoldKey.currentState?.showSnackBar(
           SnackBar(content: Text('PDF guardado en la base de datos y caché')),
         );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        _scaffoldKey.currentState?.showSnackBar(
           SnackBar(content: Text('Error al guardar el PDF: $e')),
         );
       }
@@ -369,193 +408,183 @@ class _UploadFileState extends State<UploadFile> {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
     ));
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        toolbarHeight: 0,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Sube tus imágenes',
-                style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Captura o selecciona imágenes importantes.',
-                style: TextStyle(fontSize: 16, color: textColor),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 30),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: secondaryTextColor),
-                  borderRadius: BorderRadius.circular(10),
+    return ScaffoldMessenger(
+      key: _scaffoldKey,
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        appBar: AppBar(
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          toolbarHeight: 0,
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Sube tus imágenes',
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor),
+                  textAlign: TextAlign.center,
                 ),
-                padding: EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Icon(Icons.add_a_photo, size: 50, color: accentColor),
-                    SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            icon: Icon(Icons.camera_alt),
-                            label: Text('Tomar Foto'),
-                            onPressed: () {
-                              _takePicture();
-                              // Implementar lógica para tomar foto
-                              print('Tomar foto');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              primary: buttonColor,
-                              onPrimary: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                  vertical: 8, horizontal: 12),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 10), // Espacio entre botones
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            icon: Icon(Icons.photo_library, size: 18),
-                            label: Text('Seleccionar Imagen',
-                                style: TextStyle(fontSize: 12)),
-                            onPressed: () {
-                              // Implementar lógica para seleccionar imagen
-                              print('Seleccionar imagen');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              primary: buttonColor,
-                              onPrimary: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                  vertical: 8, horizontal: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                SizedBox(height: 10),
+                Text(
+                  'Captura o selecciona imágenes importantes.',
+                  style: TextStyle(fontSize: 16, color: textColor),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              SizedBox(height: 20),
-              if (_images.isNotEmpty)
+                SizedBox(height: 30),
                 Container(
-                  width: double.infinity,
-                  height: 250,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _images.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                        onTap: () => _showDescriptionDialog(_images[index]),
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Column(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.file(
-                                  _images[index].image,
-                                  width: 150,
-                                  height: 200,
-                                  fit: BoxFit.cover,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: secondaryTextColor),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Icon(Icons.add_a_photo, size: 50, color: accentColor),
+                      SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              icon: Icon(Icons.camera_alt),
+                              label: Text('Tomar Foto'),
+                              onPressed: () {
+                                _takePicture(ImageSource.camera);
+                                // Implementar lógica para tomar foto
+                                print('Tomar foto');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                primary: buttonColor,
+                                onPrimary: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 12),
                               ),
-                              SizedBox(height: 5),
-                              Container(
-                                width: 150,
-                                child: Text(
-                                  _images[index].description.isNotEmpty
-                                      ? _images[index].description
-                                      : "Toque la imagen para poner una observación",
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _images[index].description.isNotEmpty
-                                        ? Colors.black
-                                        : Colors.grey,
-                                    fontStyle:
-                                        _images[index].description.isNotEmpty
-                                            ? FontStyle.normal
-                                            : FontStyle.italic,
+                            ),
+                          ),
+                          SizedBox(width: 10), // Espacio entre botones
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              icon: Icon(Icons.photo_library, size: 18),
+                              label: Text('Seleccionar Imagen',
+                                  style: TextStyle(fontSize: 12)),
+                              onPressed: () {
+                                _takePicture(ImageSource.gallery);
+                                // Implementar lógica para seleccionar imagen
+                                print('Seleccionar imagen');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                primary: buttonColor,
+                                onPrimary: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20),
+                if (_images.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    height: 250,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _images.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () => _showDescriptionDialog(_images[index]),
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Column(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.file(
+                                    _images[index].image,
+                                    width: 150,
+                                    height: 200,
+                                    fit: BoxFit.cover,
                                   ),
                                 ),
-                              ),
-                            ],
+                                SizedBox(height: 5),
+                                Container(
+                                  width: 150,
+                                  child: Text(
+                                    _images[index].description.isNotEmpty
+                                        ? _images[index].description
+                                        : "Toque la imagen para poner una observación",
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          _images[index].description.isNotEmpty
+                                              ? Colors.black
+                                              : Colors.grey,
+                                      fontStyle:
+                                          _images[index].description.isNotEmpty
+                                              ? FontStyle.normal
+                                              : FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              SizedBox(height: 30),
-              // Text(
-              //   'Subidas Recientes',
-              //   style: TextStyle(
-              //       fontSize: 20,
-              //       fontWeight: FontWeight.bold,
-              //       color: primaryColor),
-              // ),
-              // SizedBox(height: 10),
-              // Column(
-              //   children: recentUploads
-              //       .map((file) => UploadedFileWidget(
-              //           file, primaryColor, textColor, accentColor))
-              //       .toList(),
-              // ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    child: _isGeneratingPDF
-                        ? CircularProgressIndicator(color: Colors.white)
-                        : Text('Generar PDF'),
-                    onPressed: _isGeneratingPDF
-                        ? null
-                        : () async {
-                            String? filePath = await _generateAndSharePDF();
-                            if (filePath != null) {
-                              await _savePDFToDatabase(filePath);
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      primary: accentColor,
-                      onPrimary: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding:
-                          EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        );
+                      },
                     ),
                   ),
-                  if (_generatedPDFPath != null)
+                SizedBox(height: 30),
+                // Text(
+                //   'Subidas Recientes',
+                //   style: TextStyle(
+                //       fontSize: 20,
+                //       fontWeight: FontWeight.bold,
+                //       color: primaryColor),
+                // ),
+                // SizedBox(height: 10),
+                // Column(
+                //   children: recentUploads
+                //       .map((file) => UploadedFileWidget(
+                //           file, primaryColor, textColor, accentColor))
+                //       .toList(),
+                // ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
                     ElevatedButton(
-                      child: Text('Compartir PDF'),
-                      onPressed: _sharePDF,
+                      child: _isGeneratingPDF
+                          ? CircularProgressIndicator(color: Colors.white)
+                          : Text('Generar PDF'),
+                      onPressed: _isGeneratingPDF
+                          ? null
+                          : () async {
+                              String? filePath = await _generateAndSharePDF();
+                              if (filePath != null) {
+                                await _savePDFToDatabase(filePath);
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
-                        primary: buttonColor,
+                        primary: accentColor,
                         onPrimary: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -564,47 +593,62 @@ class _UploadFileState extends State<UploadFile> {
                             EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       ),
                     ),
-                ],
-              ),
-              SizedBox(height: 30),
-              // if (_recentPDFs!.isNotEmpty) ...[
-              //   Text(
-              //     'PDFs Recientes',
-              //     style: TextStyle(
-              //       fontSize: 20,
-              //       fontWeight: FontWeight.bold,
-              //       color: primaryColor,
-              //     ),
-              //   ),
-              //   SizedBox(height: 10),
-              //   ListView.builder(
-              //     shrinkWrap: true,
-              //     physics: NeverScrollableScrollPhysics(),
-              //     itemCount: _recentPDFs?.length,
-              //     itemBuilder: (context, index) {
-              //       final document = _recentPDFs?[index];
-              //       return ListTile(
-              //         title: Text(document!.titulo),
-              //         subtitle: Text(DateFormat('dd/MM/yyyy')
-              //             .format(document.fechaSubida)),
-              //         leading: Icon(Icons.picture_as_pdf, color: accentColor),
-              //         // trailing: document.estadoDocumento != null
-              //         //     ? Text(document.estadoDocumento!)
-              //         //     : null,
-              //         onTap: () {
-              //           // Implementar acción para abrir o descargar el PDF
-              //           print('Abrir PDF: ${document.titulo}');
-              //         },
-              //       );
-              //     },
-              //   ),
-              // ] else if (!_isLoading) ...[
-              //   Text(
-              //     'No hay PDFs recientes',
-              //     style: TextStyle(fontSize: 16, color: textColor),
-              //   ),
-              // ],
-            ],
+                    if (_generatedPDFPath != null)
+                      ElevatedButton(
+                        child: Text('Compartir PDF'),
+                        onPressed: _sharePDF,
+                        style: ElevatedButton.styleFrom(
+                          primary: buttonColor,
+                          onPrimary: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 30),
+                // if (_recentPDFs!.isNotEmpty) ...[
+                //   Text(
+                //     'PDFs Recientes',
+                //     style: TextStyle(
+                //       fontSize: 20,
+                //       fontWeight: FontWeight.bold,
+                //       color: primaryColor,
+                //     ),
+                //   ),
+                //   SizedBox(height: 10),
+                //   ListView.builder(
+                //     shrinkWrap: true,
+                //     physics: NeverScrollableScrollPhysics(),
+                //     itemCount: _recentPDFs?.length,
+                //     itemBuilder: (context, index) {
+                //       final document = _recentPDFs?[index];
+                //       return ListTile(
+                //         title: Text(document!.titulo),
+                //         subtitle: Text(DateFormat('dd/MM/yyyy')
+                //             .format(document.fechaSubida)),
+                //         leading: Icon(Icons.picture_as_pdf, color: accentColor),
+                //         // trailing: document.estadoDocumento != null
+                //         //     ? Text(document.estadoDocumento!)
+                //         //     : null,
+                //         onTap: () {
+                //           // Implementar acción para abrir o descargar el PDF
+                //           print('Abrir PDF: ${document.titulo}');
+                //         },
+                //       );
+                //     },
+                //   ),
+                // ] else if (!_isLoading) ...[
+                //   Text(
+                //     'No hay PDFs recientes',
+                //     style: TextStyle(fontSize: 16, color: textColor),
+                //   ),
+                // ],
+              ],
+            ),
           ),
         ),
       ),
