@@ -447,7 +447,8 @@ class HttpHelper {
       body: jsonEncode(<String, dynamic>{
         'titulo': titulo,
         'documento_base64': docuBase64,
-        "fecha_subida": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        "fecha_subida":
+            DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
         'usuarioId': usuarioId,
       }),
     );
@@ -478,7 +479,7 @@ class HttpHelper {
           print("entro");
           List<dynamic> documentos = jsonResponse['documento'];
           print('Response body2: $documentos');
-          return documentos.map((json) => Document.fromJson(json)).toList();         
+          return documentos.map((json) => Document.fromJson(json)).toList();
         } else {
           print('No se encontraron documentos: ${jsonResponse['message']}');
           return [];

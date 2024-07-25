@@ -30,4 +30,9 @@ class Document {
       // 'estado_documento': estadoDocumento,+
     };
   }
+
+  @override
+  String toString() {
+    return 'Document{id: $id, titulo: $titulo, fechaSubida: $fechaSubida}';
+  }
 }

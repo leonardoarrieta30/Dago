@@ -42,6 +42,10 @@ class _UploadFileState extends State<UploadFile> {
   bool _isLoading = true;
   bool _isGeneratingPDF = false;
 
+  List<Document> _recentPDFs = [];
+  bool _isLoadingPDFs = false;
+  String? _lastGeneratedPDFName;
+
   // Paleta de colores
   final Color primaryColor = Color(0xFF007BFF);
   final Color accentColor = Color(0xFF28A745);
@@ -58,6 +62,9 @@ class _UploadFileState extends State<UploadFile> {
     // jobTitleController = TextEditingController();
     // bioController = TextEditingController();
     _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPDFs();
+    });
   }
 
   // Future<void> _clearCache() async {
@@ -65,36 +72,39 @@ class _UploadFileState extends State<UploadFile> {
   //   await prefs.remove('cached_docs');
   // }
 
-  // Future<void> _loadRecentPDFs() async {
-  //   if (_user != null && _httpHelper != null) {
-  //     try {
-  //       SharedPreferences prefs = await SharedPreferences.getInstance();
-  //       String? cachedDocs = prefs.getString('cached_docs');
+  @override
+  void dispose() {
+    _lastGeneratedPDFName =
+        null; // Resetea el nombre del PDF al salir del componente
+    super.dispose();
+  }
 
-  //       if (cachedDocs != null) {
-  //         // Si hay documentos en caché, úsalos
-  //         List<dynamic> decodedDocs = jsonDecode(cachedDocs);
-  //         _recentPDFs =
-  //             decodedDocs.map((doc) => Document.fromJson(doc)).toList();
-  //         print('Loaded ${_recentPDFs?.length} PDFs from cache');
-  //       } else {
-  //         // Si no hay caché, carga desde la API
-  //         print('Loading PDFs for user ID: ${_user!.id}');
-  //         final recentDocs =
-  //             await _httpHelper!.getDocumentosByUserId(_user!.id);
-  //         _recentPDFs = recentDocs;
-  //         print('Loaded ${_recentPDFs?.length} PDFs from API');
-
-  //         // Guarda los documentos en caché
-  //         await prefs.setString('cached_docs', jsonEncode(_recentPDFs));
-  //       }
-  //     } catch (e) {
-  //       print('Error al cargar PDFs recientes: $e');
-  //     }
-  //   } else {
-  //     print('User or httpHelper is null');
-  //   }
-  // }
+  Future<void> _loadPDFs() async {
+    if (_user != null && _httpHelper != null) {
+      setState(() => _isLoadingPDFs = true);
+      try {
+        print('Loading PDFs for user ID: ${_user!.id}');
+        final recentDocs = await _httpHelper!.getDocumentosByUserId(_user!.id);
+        if (mounted) {
+          setState(() {
+            _recentPDFs = _filterOldPDFs(recentDocs)
+              // _recentPDFs = recentDocs
+              ..sort((a, b) => b.fechaSubida.compareTo(a.fechaSubida));
+            _isLoadingPDFs = false;
+          });
+        }
+        print('Loaded ${_recentPDFs.length} PDFs from API');
+      } catch (e) {
+        print('Error al cargar PDFs recientes: $e');
+        if (mounted) {
+          setState(() => _isLoadingPDFs = false);
+        }
+      }
+    } else {
+      print(
+          'User or httpHelper is null. User: $_user, HttpHelper: $_httpHelper');
+    }
+  }
 
   Future<void> _loadUsuario() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -118,11 +128,23 @@ class _UploadFileState extends State<UploadFile> {
     //   print(_user?.id);
     //   await _loadRecentPDFs();
     // }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPDFs();
+    });
 
     if (mounted) {
       // Verificar nuevamente si el widget está montado antes de llamar a setState
       setState(() => _isLoading = false);
     }
+  }
+
+  //esta para un dia veremos mañana
+  List<Document> _filterOldPDFs(List<Document> pdfs) {
+    final now = DateTime.now();
+    return pdfs.where((pdf) {
+      final difference = now.difference(pdf.fechaSubida);
+      return difference.inDays < 15;
+    }).toList();
   }
 
   @override
@@ -181,6 +203,7 @@ class _UploadFileState extends State<UploadFile> {
 
         setState(() {
           _images.add(newImage);
+          _lastGeneratedPDFName = null;
         });
 
         final appDir = await getApplicationDocumentsDirectory();
@@ -196,36 +219,62 @@ class _UploadFileState extends State<UploadFile> {
 
     Future<String?> _getPDFTitle() async {
       String? title;
-      await showDialog(
+      bool? confirmed = await showDialog<bool>(
         context: context,
+        barrierDismissible:
+            false, // Previene cerrar el diálogo tocando fuera de él
         builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Título del PDF'),
-            content: TextField(
-              onChanged: (value) {
-                title = value;
-              },
-              decoration:
-                  InputDecoration(hintText: "Ingrese el título del PDF"),
-            ),
-            actions: <Widget>[
-              TextButton(
-                child: Text('Cancelar'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
+          return StatefulBuilder(builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Título del PDF'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    onChanged: (value) {
+                      setState(() {
+                        title = value;
+                      });
+                    },
+                    decoration:
+                        InputDecoration(hintText: "Ingrese el título del PDF"),
+                  ),
+                  if (title != null && title!.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        "Por favor, ingrese un título",
+                        style: TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                ],
               ),
-              TextButton(
-                child: Text('Guardar'),
-                onPressed: () {
-                  Navigator.of(context).pop(title);
-                },
-              ),
-            ],
-          );
+              actions: <Widget>[
+                TextButton(
+                  child: Text('Cancelar'),
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                ),
+                TextButton(
+                  child: Text('Guardar'),
+                  onPressed: () {
+                    if (title == null || title!.isEmpty) {
+                      setState(() {
+                        title = ""; // Esto activará el mensaje de advertencia
+                      });
+                    } else {
+                      Navigator.of(context).pop(true);
+                    }
+                  },
+                ),
+              ],
+            );
+          });
         },
       );
-      return title;
+
+      return confirmed == true ? title : null;
     }
 
     Future<String?> _generateAndSharePDF() async {
@@ -243,7 +292,10 @@ class _UploadFileState extends State<UploadFile> {
 
       try {
         String? pdfTitle = await _getPDFTitle();
-        if (pdfTitle == null) return null; // El usuario canceló la operación
+        if (pdfTitle == null || pdfTitle.isEmpty) {
+          setState(() => _isGeneratingPDF = false);
+          return null; // El usuario canceló la operación o no ingresó un título
+        }
 
         showDialog(
           context: context,
@@ -323,6 +375,8 @@ class _UploadFileState extends State<UploadFile> {
         if (mounted) {
           setState(() {
             _generatedPDFPath = file.path;
+            _lastGeneratedPDFName = pdfTitle;
+            _images.clear();
             // _recentPDFs.insert(
             //     0,
             //     RecentPDF(
@@ -359,9 +413,19 @@ class _UploadFileState extends State<UploadFile> {
       }
     }
 
+    void _deleteImage(int index) {
+      setState(() {
+        _images.removeAt(index);
+      });
+    }
+
     Future<void> _sharePDF() async {
       if (_generatedPDFPath != null) {
         await Share.shareFiles([_generatedPDFPath!], text: 'Aquí está tu PDF');
+        // setState(() {
+        //   _lastGeneratedPDFName =
+        //       null; // Resetea el nombre después de compartir
+        // });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Primero debes generar el PDF')),
@@ -432,13 +496,13 @@ class _UploadFileState extends State<UploadFile> {
                       color: primaryColor),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 10),
-                Text(
-                  'Captura o selecciona imágenes importantes.',
-                  style: TextStyle(fontSize: 16, color: textColor),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 30),
+                // SizedBox(height: 10),
+                // Text(
+                //   'Captura o selecciona imágenes importantes.',
+                //   style: TextStyle(fontSize: 16, color: textColor),
+                //   textAlign: TextAlign.center,
+                // ),
+                SizedBox(height: 20),
                 Container(
                   decoration: BoxDecoration(
                     border: Border.all(color: secondaryTextColor),
@@ -508,47 +572,73 @@ class _UploadFileState extends State<UploadFile> {
                       scrollDirection: Axis.horizontal,
                       itemCount: _images.length,
                       itemBuilder: (context, index) {
-                        return GestureDetector(
-                          onTap: () => _showDescriptionDialog(_images[index]),
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: Column(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.file(
-                                    _images[index].image,
-                                    width: 150,
-                                    height: 200,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                SizedBox(height: 5),
-                                Container(
-                                  width: 150,
-                                  child: Text(
-                                    _images[index].description.isNotEmpty
-                                        ? _images[index].description
-                                        : "Toque la imagen para poner una observación",
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          _images[index].description.isNotEmpty
+                        return Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: () =>
+                                  _showDescriptionDialog(_images[index]),
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Column(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.file(
+                                        _images[index].image,
+                                        width: 150,
+                                        height: 200,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    SizedBox(height: 5),
+                                    Container(
+                                      width: 150,
+                                      child: Text(
+                                        _images[index].description.isNotEmpty
+                                            ? _images[index].description
+                                            : "Toque la imagen para poner una observación",
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: _images[index]
+                                                  .description
+                                                  .isNotEmpty
                                               ? Colors.black
                                               : Colors.grey,
-                                      fontStyle:
-                                          _images[index].description.isNotEmpty
+                                          fontStyle: _images[index]
+                                                  .description
+                                                  .isNotEmpty
                                               ? FontStyle.normal
                                               : FontStyle.italic,
+                                        ),
+                                      ),
                                     ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 5,
+                              right: 5,
+                              child: GestureDetector(
+                                onTap: () => _deleteImage(index),
+                                child: Container(
+                                  padding: EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 20,
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         );
                       },
                     ),
@@ -595,7 +685,9 @@ class _UploadFileState extends State<UploadFile> {
                     ),
                     if (_generatedPDFPath != null)
                       ElevatedButton(
-                        child: Text('Compartir PDF'),
+                        child: Text(_lastGeneratedPDFName != null
+                            ? 'Compartir PDF: $_lastGeneratedPDFName'
+                            : 'Compartir PDF'),
                         onPressed: _sharePDF,
                         style: ElevatedButton.styleFrom(
                           primary: buttonColor,
@@ -610,43 +702,94 @@ class _UploadFileState extends State<UploadFile> {
                   ],
                 ),
                 SizedBox(height: 30),
-                // if (_recentPDFs!.isNotEmpty) ...[
-                //   Text(
-                //     'PDFs Recientes',
-                //     style: TextStyle(
-                //       fontSize: 20,
-                //       fontWeight: FontWeight.bold,
-                //       color: primaryColor,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'PDFs Recientes',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: _loadPDFs,
+                          child: Row(
+                            children: [
+                              Icon(Icons.refresh, color: secondaryTextColor),
+                              SizedBox(width: 4),
+                              Text(
+                                'Recargar PDFs',
+                                style: TextStyle(
+                                  color: secondaryTextColor,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Los PDFs se eliminarán automáticamente de esta lista 15 días después de ser agregados',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: textColor,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    if (_isLoadingPDFs)
+                      Center(child: CircularProgressIndicator())
+                    else if (_recentPDFs.isEmpty)
+                      Text(
+                        'No hay PDFs recientes',
+                        style: TextStyle(fontSize: 16, color: textColor),
+                      )
+                    else
+                      Container(
+                        height: 250, // Ajusta esta altura según tus necesidades
+                        child: ListView.builder(
+                          itemCount: _recentPDFs.length,
+                          itemBuilder: (context, index) {
+                            final document = _recentPDFs[index];
+                            return ListTile(
+                              title: Text(document.titulo),
+                              subtitle: Text(DateFormat('dd/MM/yyyy HH:mm')
+                                  .format(document.fechaSubida)),
+                              leading: Icon(Icons.picture_as_pdf,
+                                  color: accentColor),
+                              onTap: () {
+                                print('Abrir PDF: ${document.titulo}');
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+                // SizedBox(height: 20), // Añade espacio antes del botón
+                // Padding(
+                //   padding: EdgeInsets.symmetric(
+                //       horizontal: 20), // Añade padding horizontal
+                //   child: ElevatedButton(
+                //     child: Text('Recargar PDFs'),
+                //     onPressed: _loadPDFs,
+                //     style: ElevatedButton.styleFrom(
+                //       primary: secondaryTextColor,
+                //       onPrimary: Colors.white,
+                //       padding: EdgeInsets.symmetric(vertical: 12),
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(10),
+                //       ),
                 //     ),
                 //   ),
-                //   SizedBox(height: 10),
-                //   ListView.builder(
-                //     shrinkWrap: true,
-                //     physics: NeverScrollableScrollPhysics(),
-                //     itemCount: _recentPDFs?.length,
-                //     itemBuilder: (context, index) {
-                //       final document = _recentPDFs?[index];
-                //       return ListTile(
-                //         title: Text(document!.titulo),
-                //         subtitle: Text(DateFormat('dd/MM/yyyy')
-                //             .format(document.fechaSubida)),
-                //         leading: Icon(Icons.picture_as_pdf, color: accentColor),
-                //         // trailing: document.estadoDocumento != null
-                //         //     ? Text(document.estadoDocumento!)
-                //         //     : null,
-                //         onTap: () {
-                //           // Implementar acción para abrir o descargar el PDF
-                //           print('Abrir PDF: ${document.titulo}');
-                //         },
-                //       );
-                //     },
-                //   ),
-                // ] else if (!_isLoading) ...[
-                //   Text(
-                //     'No hay PDFs recientes',
-                //     style: TextStyle(fontSize: 16, color: textColor),
-                //   ),
-                // ],
+                // ),
               ],
             ),
           ),

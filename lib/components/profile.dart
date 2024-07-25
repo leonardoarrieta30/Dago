@@ -260,6 +260,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void _logout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('usuario');
+    await prefs.remove('social_networks');
     Navigator.of(context)
         .pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
   }
