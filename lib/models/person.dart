@@ -4,7 +4,7 @@ class Person {
   final int id;
   String locacion;
   String puestoTrabajo;
-  String descripcionPersonal;
+  String area;
   final String foto_perfil;
   final int usuarioId;
 
@@ -12,7 +12,7 @@ class Person {
       {required this.id,
       required this.locacion,
       required this.puestoTrabajo,
-      required this.descripcionPersonal,
+      required this.area,
       required this.foto_perfil,
       required this.usuarioId});
 
@@ -20,7 +20,7 @@ class Person {
       : id = json['id'],
         locacion = json['locacion'],
         puestoTrabajo = json['puesto_trabajo'],
-        descripcionPersonal = json['descripcion_personal'],
+        area = json['area'] ?? '',
         foto_perfil = json['foto_perfil'],
         usuarioId = json['usuarioId'];
 }

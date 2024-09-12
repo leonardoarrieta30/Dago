@@ -24,6 +24,7 @@ dependencies:
   permission_handler: ^11.3.1
   flutter_archive: ^6.0.3
   open_file: ^3.3.2
+  table_calendar: ^3.0.8
 
 dev_dependencies:
   flutter_test:

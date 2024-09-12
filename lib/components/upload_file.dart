@@ -526,8 +526,8 @@ class _UploadFileState extends State<UploadFile> {
                                 print('Tomar foto');
                               },
                               style: ElevatedButton.styleFrom(
-                                primary: buttonColor,
-                                onPrimary: Colors.white,
+                                //primary: buttonColor,
+                                // onPrimary: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -548,8 +548,8 @@ class _UploadFileState extends State<UploadFile> {
                                 print('Seleccionar imagen');
                               },
                               style: ElevatedButton.styleFrom(
-                                primary: buttonColor,
-                                onPrimary: Colors.white,
+                                //primary: buttonColor,
+                                //onPrimary: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -674,8 +674,8 @@ class _UploadFileState extends State<UploadFile> {
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        primary: accentColor,
-                        onPrimary: Colors.white,
+                        //primary: accentColor,
+                        //onPrimary: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -690,8 +690,8 @@ class _UploadFileState extends State<UploadFile> {
                             : 'Compartir PDF'),
                         onPressed: _sharePDF,
                         style: ElevatedButton.styleFrom(
-                          primary: buttonColor,
-                          onPrimary: Colors.white,
+                          //primary: buttonColor,
+                          //onPrimary: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),

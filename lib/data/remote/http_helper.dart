@@ -12,7 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class HttpHelper {
-  final String urlBase = 'http://192.168.18.7:8080/api/v1';
+  final String urlBase = 'http://192.168.18.213:8080/api/v1';
 
   Future<Person> getPersonById(int id) async {
     final response = await http.get(Uri.parse('$urlBase/personas/$id'));
@@ -140,7 +140,7 @@ class HttpHelper {
   Future<SignUpResponse> registrarPersona(
     String locacion,
     String puesto_trabajo,
-    String descripcion_personal,
+    String descripcionPersonal,
     int usuario_id,
     String base64Image,
   ) async {
@@ -152,7 +152,7 @@ class HttpHelper {
       body: jsonEncode(<String, dynamic>{
         'locacion': locacion,
         'puesto_trabajo': puesto_trabajo,
-        'descripcion_personal': descripcion_personal,
+        'area': descripcionPersonal,
         'foto_perfil': base64Image,
         'usuarioId': usuario_id,
       }),
@@ -191,7 +191,7 @@ class HttpHelper {
   Future<SignUpResponse> actualizarPersona(
     String locacion,
     String puesto_trabajo,
-    String descripcion_personal,
+    String descripcionPersonal,
     int usuario_id,
     int personaId,
     String base64Image,
@@ -208,7 +208,7 @@ class HttpHelper {
         body: jsonEncode(<String, dynamic>{
           'locacion': locacion,
           'puesto_trabajo': puesto_trabajo,
-          'descripcion_personal': descripcion_personal,
+          'area': descripcionPersonal,
           'foto_perfil': base64Image,
           'usuarioId': usuario_id,
         }),
