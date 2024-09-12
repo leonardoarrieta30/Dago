@@ -1,6 +1,5 @@
 import 'package:dago_application/data/remote/http_helper.dart';
 import 'package:dago_application/models/response/login_response.dart';
-import 'package:dago_application/models/response/sign_up_response.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

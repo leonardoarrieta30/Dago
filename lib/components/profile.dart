@@ -626,7 +626,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Area',
+                Text('Área',
                     style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
