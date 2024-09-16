@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:dago_application/data/remote/http_helper.dart';
+import 'package:dago_application/models/document.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -13,13 +16,25 @@ class _HomeScreenState extends State<HomeScreen> {
   TextEditingController _searchController = TextEditingController();
   DateTime? _fromDate;
   DateTime? _toDate;
-  List<dynamic> _searchResults = [];
+  List<Document> _searchResults = [];
   bool _isLoading = false;
+  HttpHelper? _httpHelper;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
+    _httpHelper = HttpHelper();
     _loadUserName();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
   }
 
   void _loadUserName() async {
@@ -47,8 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _selectDate(BuildContext context, bool isFromDate) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate:
-          isFromDate ? _fromDate ?? DateTime.now() : _toDate ?? DateTime.now(),
+      initialDate: isFromDate
+          ? (_fromDate ?? DateTime.now())
+          : (_toDate ?? DateTime.now()),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
@@ -60,17 +76,24 @@ class _HomeScreenState extends State<HomeScreen> {
           _toDate = picked;
         }
       });
+      _performSearch();
     }
   }
 
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (_fromDate != null) {
+        _performSearch();
+      }
+    });
+  }
+
   Future<void> _performSearch() async {
-    if (_searchController.text.isEmpty ||
-        _fromDate == null ||
-        _toDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Por favor, complete todos los campos de búsqueda')),
-      );
+    if (_searchController.text.isEmpty || _fromDate == null) {
+      setState(() {
+        _searchResults = [];
+      });
       return;
     }
 
@@ -78,22 +101,29 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = true;
     });
 
-    // Simular llamada API
-    await Future.delayed(Duration(seconds: 2));
+    try {
+      String fromDateStr = DateFormat('yyyy-MM-dd').format(_fromDate!);
+      String toDateStr = _toDate != null
+          ? DateFormat('yyyy-MM-dd').format(_toDate!)
+          : DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final response = await _httpHelper!.getDocumentosByArea(
+        _searchController.text,
+        fromDateStr,
+        toDateStr,
+      );
 
-    // Simulación de respuesta de API
-    final response = {
-      'results': [
-        {'id': 1, 'title': 'Resultado 1', 'date': '2024-09-15'},
-        {'id': 2, 'title': 'Resultado 2', 'date': '2024-09-16'},
-        {'id': 3, 'title': 'Resultado 3', 'date': '2024-09-17'},
-      ]
-    };
-
-    setState(() {
-      _searchResults = response['results']!;
-      _isLoading = false;
-    });
+      setState(() {
+        _searchResults = response ?? [];
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al buscar documentos: $e')),
+      );
+    }
   }
 
   @override
@@ -118,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
               TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Buscar por área...',
+                  hintText: 'Buscar documentos por área...',
                   prefixIcon: Icon(Icons.search),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -141,21 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: TextButton(
                       onPressed: () => _selectDate(context, false),
                       child: Text(_toDate == null
-                          ? 'Hasta'
+                          ? 'Hasta (opcional)'
                           : 'Hasta: ${DateFormat('dd/MM/yyyy').format(_toDate!)}'),
                     ),
                   ),
                 ],
-              ),
-              SizedBox(height: 10),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _performSearch,
-                  child: Text('Buscar'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(200, 50), // Ajusta el tamaño del botón
-                  ),
-                ),
               ),
               SizedBox(height: 20),
               Expanded(
@@ -166,8 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemBuilder: (context, index) {
                           final result = _searchResults[index];
                           return ListTile(
-                            title: Text(result['title']),
-                            subtitle: Text(result['date']),
+                            title: Text(result.titulo),
                             onTap: () {
                               // Aquí puedes agregar la lógica para manejar el tap en un resultado
                             },

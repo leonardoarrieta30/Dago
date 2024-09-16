@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:dago_application/models/person.dart';
+
 class User {
   final int id;
   final String user;
@@ -6,8 +10,9 @@ class User {
   final String apellido;
   final String fechaNacimiento;
   final String dni;
+  final Person? persona;
 
-  User(
+  User(this.persona,
       {required this.id,
       required this.user,
       required this.password,
@@ -23,7 +28,9 @@ class User {
         nombre = json['nombre'],
         apellido = json['apellido'],
         fechaNacimiento = json['fecha_nacimiento'],
-        dni = json['dni'];
+        dni = json['dni'],
+        persona =
+            json['persona'] != null ? Person.fromJson(json['persona']) : null;
 
   Map<String, dynamic> toJson() => {
         'id': id,

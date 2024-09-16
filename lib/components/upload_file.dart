@@ -85,11 +85,12 @@ class _UploadFileState extends State<UploadFile> {
       try {
         print('Loading PDFs for user ID: ${_user!.id}');
         final recentDocs = await _httpHelper!.getDocumentosByUserId(_user!.id);
+        print("recent docs $recentDocs");
         if (mounted) {
           setState(() {
-            _recentPDFs = _filterOldPDFs(recentDocs)
-              // _recentPDFs = recentDocs
-              ..sort((a, b) => b.fechaSubida.compareTo(a.fechaSubida));
+            _recentPDFs = recentDocs;
+            // _recentPDFs = recentDocs
+            //..sort((a, b) => b.fechaSubida.compareTo(a.fechaSubida));
             _isLoadingPDFs = false;
           });
         }
@@ -139,13 +140,13 @@ class _UploadFileState extends State<UploadFile> {
   }
 
   //esta para un dia veremos mañana
-  List<Document> _filterOldPDFs(List<Document> pdfs) {
+/*   List<Document> _filterOldPDFs(List<Document> pdfs) {
     final now = DateTime.now();
     return pdfs.where((pdf) {
       final difference = now.difference(pdf.fechaSubida);
       return difference.inDays < 15;
     }).toList();
-  }
+  } */
 
   @override
   Widget build(BuildContext context) {
@@ -760,8 +761,7 @@ class _UploadFileState extends State<UploadFile> {
                             final document = _recentPDFs[index];
                             return ListTile(
                               title: Text(document.titulo),
-                              subtitle: Text(DateFormat('dd/MM/yyyy HH:mm')
-                                  .format(document.fechaSubida)),
+                              subtitle: Text((document.fechaSubida)),
                               leading: Icon(Icons.picture_as_pdf,
                                   color: accentColor),
                               onTap: () {
