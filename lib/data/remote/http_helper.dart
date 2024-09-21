@@ -494,7 +494,7 @@ class HttpHelper {
     }
   }
 
-  Future<List<Document>> getDocumentosByArea(
+  /* Future<List<Document>> getDocumentosByArea(
       String area, String fromDateStr, String toDateStr) async {
     print("desde $fromDateStr");
     print("hasta $toDateStr");
@@ -521,6 +521,63 @@ class HttpHelper {
       }
     } catch (e) {
       print('Error in getDocumentosByUserId: $e');
+      return [];
+    }
+  } */
+
+  Future<List<Document>> getDocumentosByArea(
+      String? area, String? fromDateStr, String? toDateStr) async {
+    print("desde $fromDateStr");
+    print("hasta $toDateStr");
+
+    try {
+      // Construcción dinámica de la URL con los parámetros
+      String queryParams = '';
+
+      // Agregar el área solo si se proporciona
+      if (area != null && area.isNotEmpty) {
+        queryParams += 'area=$area';
+      }
+
+      // Agregar las fechas solo si se proporcionan
+      if (fromDateStr != null &&
+          toDateStr != null &&
+          fromDateStr.isNotEmpty &&
+          toDateStr.isNotEmpty) {
+        if (queryParams.isNotEmpty) {
+          queryParams += '&';
+        }
+        queryParams += 'desde=$fromDateStr&hasta=$toDateStr';
+      }
+
+      // Crear la URL con los parámetros condicionales
+      final String url = '$urlBase/documentos/pdfs-by-area';
+      final Uri uri =
+          Uri.parse(queryParams.isNotEmpty ? '$url?$queryParams' : url);
+
+      final response = await http.get(
+        uri,
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+      );
+
+      print(response.statusCode);
+      if (response.statusCode == 200) {
+        Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['status'] == 1) {
+          List<dynamic> documentos = jsonResponse['documentos'];
+          return documentos.map((json) => Document.fromJson(json)).toList();
+        } else {
+          print('No se encontraron documentos: ${jsonResponse['mensaje']}');
+          return [];
+        }
+      } else {
+        print('Error en la solicitud: Código de estado ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('Error in getDocumentosByArea: $e');
       return [];
     }
   }

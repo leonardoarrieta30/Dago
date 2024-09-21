@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:dago_application/models/person.dart';
 import 'package:dago_application/models/response/sign_up_response.dart';
 import 'package:dago_application/models/social.dart';
@@ -37,6 +38,9 @@ class _ProfilePageState extends State<ProfilePage> {
   File? _image;
   String base64Image = '';
 
+  // Añade esta nueva variable de clase
+  OverlayEntry? _overlayEntry;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +55,47 @@ class _ProfilePageState extends State<ProfilePage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _loadSocialNetworks();
+  }
+
+  void _showProfileImage() {
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned.fill(
+        child: GestureDetector(
+          onTap: _hideProfileImage,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              color: Colors.black.withOpacity(0.5),
+              child: Center(
+                child: Hero(
+                  tag: 'profileImage',
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    height: MediaQuery.of(context).size.width * 0.8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      image: DecorationImage(
+                        image: _getProfileImage() ??
+                            AssetImage('assets/default_profile.png'),
+                        fit: BoxFit.cover,
+                      ),
+                      border: Border.all(color: Colors.white, width: 4),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    Overlay.of(context)?.insert(_overlayEntry!);
+  }
+
+  void _hideProfileImage() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
   }
 
   void _loadUsuario() async {
@@ -324,36 +369,25 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   GestureDetector(
                     onTap: _pickImage,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: Colors.white,
-                          backgroundImage: _getProfileImage(),
-                          child: _getProfileImage() == null
-                              ? Icon(Icons.person,
-                                  size: 50, color: Color(0xFF6C757D))
-                              : null,
-                        ),
-                        if (_getProfileImage() == null)
-                          Positioned(
-                            bottom: 0,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.7),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                'Subir foto',
-                                style: TextStyle(
-                                    color: Colors.white, fontSize: 10),
-                              ),
-                            ),
+                    onLongPress: _showProfileImage, // Añade esta línea
+                    child: Hero(
+                      tag: 'profileImage',
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          image: DecorationImage(
+                            image: _getProfileImage() ??
+                                AssetImage('assets/default_profile.png'),
+                            fit: BoxFit.cover,
                           ),
-                      ],
+                        ),
+                        child: _getProfileImage() == null
+                            ? Icon(Icons.person,
+                                size: 50, color: Color(0xFF6C757D))
+                            : null,
+                      ),
                     ),
                   ),
                   SizedBox(width: 15),

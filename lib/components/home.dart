@@ -26,7 +26,34 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _httpHelper = HttpHelper();
     _loadUserName();
-    _searchController.addListener(_onSearchChanged);
+    _fetchAllDocuments(); // Cargar todos los documentos inicialmente
+    //_searchController.addListener(_onSearchChanged);
+  }
+
+  Future<void> _fetchAllDocuments() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await _httpHelper!.getDocumentosByArea(null, null, null);
+
+      if (!mounted) return;
+
+      setState(() {
+        _searchResults = response ?? [];
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar documentos: $e')),
+      );
+    }
   }
 
   @override
@@ -59,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _selectDate(BuildContext context, bool isFromDate) async {
+  void _selectDate(BuildContext context, bool isFromDate) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: isFromDate
@@ -72,11 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         if (isFromDate) {
           _fromDate = picked;
+          _toDate = null; // Resetear la fecha "Hasta"
         } else {
           _toDate = picked;
         }
       });
-      _performSearch();
+      _performSearch(); // Realizar búsqueda después de seleccionar la fecha
     }
   }
 
@@ -90,10 +118,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _performSearch() async {
-    if (_searchController.text.isEmpty || _fromDate == null) {
-      setState(() {
-        _searchResults = [];
-      });
+    if (_fromDate == null) {
+      // Si no hay fecha "Desde", cargamos todos los documentos
+      await _fetchAllDocuments();
       return;
     }
 
@@ -106,17 +133,24 @@ class _HomeScreenState extends State<HomeScreen> {
       String toDateStr = _toDate != null
           ? DateFormat('yyyy-MM-dd').format(_toDate!)
           : DateFormat('yyyy-MM-dd').format(DateTime.now());
+      String? area =
+          _searchController.text.isNotEmpty ? _searchController.text : null;
+
       final response = await _httpHelper!.getDocumentosByArea(
-        _searchController.text,
+        area,
         fromDateStr,
         toDateStr,
       );
+
+      if (!mounted) return;
 
       setState(() {
         _searchResults = response ?? [];
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
@@ -154,6 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
+                //onSubmitted: (_) => _performSearch(),
               ),
               SizedBox(height: 10),
               Row(
