@@ -7,6 +7,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  google_fonts: ^5.1.0
   http: ^1.2.0
   cupertino_icons: ^1.0.2
   flutter_login: ^5.0.0
@@ -25,6 +26,8 @@ dependencies:
   flutter_archive: ^6.0.3
   open_file: ^3.3.2
   table_calendar: ^3.0.8
+  dio: ^5.1.2
+  
 
 dev_dependencies:
   flutter_test:
@@ -34,3 +37,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/engineering.png
+  fonts: 
+    - family: KronaOne
+      fonts:
+        - asset: fonts\KronaOne-Regular.ttf
+          

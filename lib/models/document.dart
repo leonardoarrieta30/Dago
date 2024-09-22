@@ -26,7 +26,7 @@ class Document {
         fechaSubida =
             json['fecha_subida'] ?? '', // Ya no se convierte a DateTime
         usuarioId = json['usuarioId'] ?? 0,
-        user = json['user'] != null ? User.fromJson(json['user']) : null;
+        user = json['usuario'] != null ? User.fromJson(json['usuario']) : null;
 
   Map<String, dynamic> toJson() {
     return {

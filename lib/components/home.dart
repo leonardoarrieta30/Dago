@@ -1,10 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:dago_application/data/remote/http_helper.dart';
 import 'package:dago_application/models/document.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+
+import 'package:path_provider/path_provider.dart';
+import 'package:dio/dio.dart';
+import 'package:open_file/open_file.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -160,6 +167,49 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _saveAndOpenPDF(String base64String, String fileName) async {
+    // Solicitar permisos de almacenamiento
+    var status = await Permission.storage.request();
+    if (status.isGranted) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Decodificar el string base64
+        Uint8List bytes = base64Decode(base64String);
+
+        // Obtener el directorio de documentos
+        Directory? appDocDir = await getExternalStorageDirectory();
+        String filePath = '${appDocDir!.path}/$fileName';
+
+        // Escribir el archivo
+        File file = File(filePath);
+        await file.writeAsBytes(bytes);
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Abrir el archivo
+        await OpenFile.open(filePath);
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al procesar el documento: $e')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Se requieren permisos de almacenamiento para guardar el documento')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -175,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFA0522D),
+                  color: Color.fromARGB(255, 58, 19, 1),
                 ),
               ),
               SizedBox(height: 20),
@@ -220,15 +270,67 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: _searchResults.length,
                         itemBuilder: (context, index) {
                           final result = _searchResults[index];
-                          return ListTile(
-                            title: Text(result.titulo),
-                            onTap: () {
-                              // Aquí puedes agregar la lógica para manejar el tap en un resultado
-                            },
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 4.0, horizontal: 8.0),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: const Color.fromARGB(255, 80, 7,
+                                      47), // Puedes cambiar este color
+                                  width: 2,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: ListTile(
+                                title: Text(
+                                  result.titulo.split(".").first,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'KronaOne',
+                                  ),
+                                ),
+                                onTap: () {
+                                  _saveAndOpenPDF(result.documentoBase64,
+                                      '${result.titulo}.pdf');
+                                },
+                                // Puedes añadir más detalles aquí si lo deseas
+                                trailing: Icon(Icons.arrow_forward_ios),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Área: ${result.user?.persona?.descripcionPersonal ?? 'No especificada'}',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Fecha de subida: ${result.fechaSubida}',
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Reporte de: ${result.user?.nombre} ${result.user?.apellido}',
+                                      style: TextStyle(
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                /*  subtitle: Text(
+                                  result.fechaSubida,
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                  ),
+                                ), */
+                              ),
+                            ),
                           );
                         },
                       ),
-              ),
+              )
             ],
           ),
         ),

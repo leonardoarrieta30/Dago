@@ -279,23 +279,20 @@ class _UploadFileState extends State<UploadFile> {
     }
 
     Future<String?> _generateAndSharePDF() async {
-      if (!mounted) return null; // Verifica si el widget aún está montado
+      if (!mounted) return null;
       if (_images.isEmpty) {
         _scaffoldKey.currentState?.showSnackBar(
-          // Usa _scaffoldKey en lugar de ScaffoldMessenger.of(context)
           SnackBar(content: Text('No hay fotos para generar el PDF')),
         );
         return null;
       }
-      if (!mounted)
-        return null; // Verifica nuevamente después de mostrar el SnackBar
       setState(() => _isGeneratingPDF = true);
 
       try {
         String? pdfTitle = await _getPDFTitle();
         if (pdfTitle == null || pdfTitle.isEmpty) {
           setState(() => _isGeneratingPDF = false);
-          return null; // El usuario canceló la operación o no ingresó un título
+          return null;
         }
 
         showDialog(
@@ -339,15 +336,26 @@ class _UploadFileState extends State<UploadFile> {
 
           pdf.addPage(
             pw.Page(
+              margin: pw.EdgeInsets.all(10),
               build: (pw.Context context) {
-                return pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.center,
-                  mainAxisAlignment: pw.MainAxisAlignment.center,
-                  children: [
-                    pw.Image(pdfImage, height: 500),
-                    pw.SizedBox(height: 10),
-                    pw.Text(imageWithDesc.description),
-                  ],
+                return pw.Center(
+                  child: pw.Column(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.SizedBox(
+                        width: 500,
+                        height: 600,
+                        child: pw.Image(pdfImage, fit: pw.BoxFit.contain),
+                      ),
+                      pw.SizedBox(height: 20),
+                      pw.Text(
+                        imageWithDesc.description,
+                        style: pw.TextStyle(font: font, fontSize: 14),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ],
+                  ),
                 );
               },
             ),
@@ -468,6 +476,11 @@ class _UploadFileState extends State<UploadFile> {
     // Future<void> _sharePDF(String filePath) async {
     //   await Share.shareFiles([filePath], text: 'Aquí está tu PDF');
     // }
+
+    String _truncateText(String text, int maxLength) {
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength - 3) + '...';
+    }
 
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -687,7 +700,7 @@ class _UploadFileState extends State<UploadFile> {
                     if (_generatedPDFPath != null)
                       ElevatedButton(
                         child: Text(_lastGeneratedPDFName != null
-                            ? 'Compartir PDF: $_lastGeneratedPDFName'
+                            ? 'Compartir PDF: ${_truncateText(_lastGeneratedPDFName!, 10)}'
                             : 'Compartir PDF'),
                         onPressed: _sharePDF,
                         style: ElevatedButton.styleFrom(
@@ -710,7 +723,7 @@ class _UploadFileState extends State<UploadFile> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'PDFs Recientes',
+                          'Tus documentos',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -736,14 +749,14 @@ class _UploadFileState extends State<UploadFile> {
                       ],
                     ),
                     SizedBox(height: 4),
-                    Text(
+                    /* Text(
                       'Los PDFs se eliminarán automáticamente de esta lista 15 días después de ser agregados',
                       style: TextStyle(
                         fontSize: 11.5,
                         color: textColor,
                         fontStyle: FontStyle.italic,
                       ),
-                    ),
+                    ), */
                     SizedBox(height: 10),
                     if (_isLoadingPDFs)
                       Center(child: CircularProgressIndicator())
@@ -760,7 +773,7 @@ class _UploadFileState extends State<UploadFile> {
                           itemBuilder: (context, index) {
                             final document = _recentPDFs[index];
                             return ListTile(
-                              title: Text(document.titulo),
+                              title: Text(document.titulo.split(".").first),
                               subtitle: Text((document.fechaSubida)),
                               leading: Icon(Icons.picture_as_pdf,
                                   color: accentColor),

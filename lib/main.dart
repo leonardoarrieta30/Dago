@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 
 void main() {
   runApp(MaterialApp(
+    title: 'Dago Application',
+    theme: ThemeData(
+      primarySwatch: Colors.blue,
+    ),
     initialRoute: '/',
     routes: {
       '/login': (context) => LoginScreen(),
