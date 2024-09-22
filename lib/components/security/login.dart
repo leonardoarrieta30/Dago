@@ -82,8 +82,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text('Acceso Construcción',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+/*         title: Text('Acceso Construcción',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), */
         backgroundColor: primaryColor,
         elevation: 0,
       ),
@@ -101,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 20),
               Text(
-                'Bienvenido, Constructor',
+                'Bienvenido, Inge',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,

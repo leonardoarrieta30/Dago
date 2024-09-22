@@ -295,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       '${result.titulo}.pdf');
                                 },
                                 // Puedes añadir más detalles aquí si lo deseas
-                                trailing: Icon(Icons.arrow_forward_ios),
+                                trailing: Icon(Icons.remove_red_eye_outlined),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
