@@ -27,6 +27,7 @@ dependencies:
   open_file: ^3.3.2
   table_calendar: ^3.0.8
   dio: ^5.1.2
+  another_flushbar: ^1.12.30
   
 
 dev_dependencies:

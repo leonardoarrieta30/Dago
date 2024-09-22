@@ -447,8 +447,7 @@ class HttpHelper {
       body: jsonEncode(<String, dynamic>{
         'titulo': titulo,
         'documento_base64': docuBase64,
-        "fecha_subida":
-            DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
+        "fecha_subida": DateFormat('dd-MM-yyyy').format(DateTime.now()),
         'usuarioId': usuarioId,
       }),
     );

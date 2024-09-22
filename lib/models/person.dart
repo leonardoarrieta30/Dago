@@ -21,4 +21,10 @@ class Person {
         descripcionPersonal = json['area'],
         foto_perfil = json['foto_perfil'],
         usuarioId = json['usuarioId'];
+
+/*   Map<String, dynamic> toJson() {
+    return {
+      'area': descripcionPersonal,
+    };
+  } */
 }

@@ -28,12 +28,18 @@ class Document {
         usuarioId = json['usuarioId'] ?? 0,
         user = json['usuario'] != null ? User.fromJson(json['usuario']) : null;
 
+  // Método para convertir una lista de JSON a una lista de Document
+  static List<Document> fromJsonList(List<dynamic> jsonList) {
+    return jsonList.map((json) => Document.fromJson(json)).toList();
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'titulo': titulo,
       'documento_base64': documentoBase64,
       'fecha_subida': fechaSubida, // No se necesita convertir a ISO8601
+      //'user': user?.toJson(),
       // 'estado_documento': estadoDocumento,+
     };
   }
