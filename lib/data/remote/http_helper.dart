@@ -580,4 +580,24 @@ class HttpHelper {
       return [];
     }
   }
+
+  Future<bool> getAreaByUsuarioId(int usuarioId) async {
+    final response = await http.get(
+      Uri.parse('$urlBase/personas/areaByUsuarioId/$usuarioId'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      if (data['status'] == 1) {
+        return data['isExists'];
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
 }
