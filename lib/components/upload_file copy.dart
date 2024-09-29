@@ -166,61 +166,28 @@ class _UploadFileState extends State<UploadFile> {
         builder: (BuildContext context) {
           String tempDescription = image.description;
           return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15.0), // Bordes redondeados
-            ),
-            title: Text(
-              image.description.isEmpty
-                  ? 'Agregar observación'
-                  : 'Editar observación',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
+            title: Text(image.description.isEmpty
+                ? 'Agregar observación'
+                : 'Editar observación'),
             content: TextField(
               controller: TextEditingController(text: image.description),
               onChanged: (value) {
                 tempDescription = value;
               },
-              decoration: InputDecoration(
-                hintText: "Ingrese una observación",
-                hintStyle:
-                    TextStyle(color: Colors.grey[400]), // Color del placeholder
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                ),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-              ),
+              decoration: InputDecoration(hintText: "Ingrese una observación"),
             ),
             actions: <Widget>[
               TextButton(
-                child: Text(
-                  'Cancelar',
-                  style: TextStyle(color: Colors.red, fontSize: 16),
-                ),
+                child: Text('Cancelar'),
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
               ),
-              ElevatedButton(
-                child: Text(
-                  'Guardar',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
+              TextButton(
+                child: Text('Guardar'),
                 onPressed: () {
                   Navigator.of(context).pop(tempDescription);
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor, // Color principal del tema
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-                ),
               ),
             ],
           );
@@ -267,17 +234,7 @@ class _UploadFileState extends State<UploadFile> {
         builder: (BuildContext context) {
           return StatefulBuilder(builder: (context, setState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15.0), // Bordes redondeados
-              ),
-              title: Text(
-                'Título del PDF',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
+              title: Text('Título del PDF'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -287,44 +244,28 @@ class _UploadFileState extends State<UploadFile> {
                         title = value;
                       });
                     },
-                    decoration: InputDecoration(
-                      hintText: "Ingrese el título del PDF",
-                      hintStyle:
-                          TextStyle(color: Colors.grey[400]), // Estilo del hint
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide:
-                            BorderSide(color: Theme.of(context).primaryColor),
-                      ),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                    ),
+                    decoration:
+                        InputDecoration(hintText: "Ingrese el título del PDF"),
                   ),
                   if (title != null && title!.isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
                         "Por favor, ingrese un título",
-                        style: TextStyle(color: Colors.redAccent, fontSize: 12),
+                        style: TextStyle(color: Colors.red, fontSize: 12),
                       ),
                     ),
                 ],
               ),
               actions: <Widget>[
                 TextButton(
-                  child: Text(
-                    'Cancelar',
-                    style: TextStyle(color: Colors.red, fontSize: 16),
-                  ),
+                  child: Text('Cancelar'),
                   onPressed: () {
                     Navigator.of(context).pop(false);
                   },
                 ),
-                ElevatedButton(
-                  child: Text(
-                    'Guardar',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
+                TextButton(
+                  child: Text('Guardar'),
                   onPressed: () {
                     if (title == null || title!.isEmpty) {
                       setState(() {
@@ -334,13 +275,6 @@ class _UploadFileState extends State<UploadFile> {
                       Navigator.of(context).pop(true);
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor, // Color principal del tema
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-                  ),
                 ),
               ],
             );
@@ -407,7 +341,7 @@ class _UploadFileState extends State<UploadFile> {
       if (!mounted) return null;
       if (_images.isEmpty) {
         _scaffoldKey.currentState?.showSnackBar(
-          SnackBar(content: Text('No hay fotos para generar el documento')),
+          SnackBar(content: Text('No hay fotos para generar el PDF')),
         );
         return null;
       }
@@ -425,33 +359,13 @@ class _UploadFileState extends State<UploadFile> {
           barrierDismissible: false,
           builder: (BuildContext context) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15.0), // Bordes redondeados
-              ),
-              content: Padding(
-                padding: const EdgeInsets.all(
-                    20.0), // Añade padding para espacio extra
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context)
-                              .primaryColor), // Color del indicador de progreso
-                    ),
-                    SizedBox(height: 20),
-                    Text(
-                      "Generando PDF...",
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign:
-                          TextAlign.center, // Alinea el texto en el centro
-                    ),
-                  ],
-                ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 20),
+                  Text("Generando PDF..."),
+                ],
               ),
             );
           },
@@ -734,7 +648,7 @@ class _UploadFileState extends State<UploadFile> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Genera Incidencias',
+                  'Sube tus imágenes',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -759,17 +673,8 @@ class _UploadFileState extends State<UploadFile> {
                   padding: EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      Text(
-                        'Toma o sube una foto',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.black87,
-                          fontFamily:
-                              'Montserrat', // Usar una fuente moderna y estilizada
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 10),
+                      Icon(Icons.camera_alt, size: 50, color: accentColor),
+                      SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
@@ -882,7 +787,9 @@ class _UploadFileState extends State<UploadFile> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton(
-                      child: Text('Generar PDF'),
+                      child: _isGeneratingPDF
+                          ? CircularProgressIndicator(color: Colors.white)
+                          : Text('Generar PDF'),
                       onPressed: _isGeneratingPDF
                           ? null
                           : () async {
@@ -908,11 +815,10 @@ class _UploadFileState extends State<UploadFile> {
                             : 'Compartir PDF'),
                         onPressed: _sharePDF,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orangeAccent,
-                          foregroundColor:
-                              const Color.fromARGB(255, 49, 47, 47),
+                          //primary: buttonColor,
+                          //onPrimary: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.zero,
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           padding: EdgeInsets.symmetric(
                               vertical: 12, horizontal: 16),
@@ -991,16 +897,11 @@ class _UploadFileState extends State<UploadFile> {
                                 borderRadius: BorderRadius.circular(10),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.grey.withOpacity(0.1),
-                                    spreadRadius: 1,
-                                    blurRadius: 5,
+                                    color: Colors.black12,
+                                    blurRadius: 6,
                                     offset: Offset(0, 3),
                                   ),
                                 ],
-                                border: Border.all(
-                                  color: Colors.grey[300]!,
-                                  width: 1.5,
-                                ),
                               ),
                               child: ListTile(
                                 contentPadding: EdgeInsets.symmetric(

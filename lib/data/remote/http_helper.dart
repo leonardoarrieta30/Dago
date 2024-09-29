@@ -447,7 +447,7 @@ class HttpHelper {
       body: jsonEncode(<String, dynamic>{
         'titulo': titulo,
         'documento_base64': docuBase64,
-        "fecha_subida": DateFormat('dd-MM-yyyy').format(DateTime.now()),
+        "fecha_subida": DateFormat('yyyy-MM-dd').format(DateTime.now()),
         'usuarioId': usuarioId,
       }),
     );
@@ -525,10 +525,10 @@ class HttpHelper {
   } */
 
   Future<List<Document>> getDocumentosByArea(
-      String? area, String? fromDateStr, String? toDateStr) async {
+      String? areaParameter, String? fromDateStr, String? toDateStr) async {
     print("desde $fromDateStr");
     print("hasta $toDateStr");
-
+    var area = areaParameter?.trim();
     try {
       // Construcción dinámica de la URL con los parámetros
       String queryParams = '';
@@ -581,6 +581,27 @@ class HttpHelper {
     }
   }
 
+// Método para obtener el base64 del documento específico
+  Future<String?> getDocumentoBase64(int documentoId) async {
+    try {
+      final String url =
+          '$urlBase/documentos/pdf/$documentoId'; // Asegúrate de que esta URL sea correcta
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        return jsonResponse[
+            'documento_base64']; // Asegúrate de que este campo exista en la respuesta
+      } else {
+        print('Error en la solicitud: Código de estado ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error en getDocumentoBase64: $e');
+      return null;
+    }
+  }
+
   Future<bool> getAreaByUsuarioId(int usuarioId) async {
     final response = await http.get(
       Uri.parse('$urlBase/personas/areaByUsuarioId/$usuarioId'),
@@ -598,6 +619,38 @@ class HttpHelper {
       }
     } else {
       return false;
+    }
+  }
+
+// Ejemplo de método en HttpHelper para recuperar contraseña (esta en proceso)
+  Future<void> sendPasswordResetEmail(String email) async {
+    // Lógica para enviar solicitud al servidor para enviar el correo de recuperación
+    final response = await http.post(
+      Uri.parse('https://tu-api.com/recuperar-password'),
+      body: jsonEncode({'email': email}),
+    );
+
+    if (response.statusCode == 200) {
+      // Lógica en caso de éxito
+    } else {
+      // Lógica en caso de error
+    }
+  }
+
+  Future<void> deleteDocumentoById(int documentoId) async {
+    final response = await http.delete(
+      Uri.parse('$urlBase/documentos/$documentoId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> responseData = json.decode(response.body);
+      if (responseData['status'] != 1) {
+        throw Exception(
+            'Error al eliminar el documento: ${responseData['message']}');
+      }
+    } else {
+      throw Exception('Error en la solicitud: ${response.statusCode}');
     }
   }
 }

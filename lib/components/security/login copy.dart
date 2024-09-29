@@ -1,12 +1,12 @@
 import 'dart:convert';
+
 import 'package:dago_application/components/bienvenida.dart';
-import 'package:dago_application/components/security/forgotpassword.dart';
+import 'package:dago_application/models/response/login_response.dart';
+import 'package:dago_application/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:dago_application/components/security/signup.dart';
 import 'package:dago_application/data/remote/http_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dago_application/models/response/login_response.dart';
-import 'package:dago_application/models/user.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -16,16 +16,17 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   TextEditingController _usuarioController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
-  bool _obscureText = true; // Control visibility of password
+  bool _obscureText = true; // Para controlar la visibilidad de la contraseña
 
   HttpHelper? _httpHelper;
 
-  // Modern and attractive color palette
-  final Color primaryColor = Color(0xFF3B82F6); // Sky blue
-  final Color accentColor = Color(0xFFEC4899); // Pink
-  final Color backgroundColor = Color(0xFFF3F4F6); // Light grey
-  final Color textColor = Color(0xFF111827); // Dark grey
-  final Color buttonColor = Color(0xFF10B981); // Green
+  // Paleta de colores
+  final Color primaryColor = Color(0xFF007BFF); // Azul fuerte
+  final Color accentColor = Color(0xFF28A745); // Verde fuerte
+  final Color backgroundColor = Color(0xFFE9ECEF); // Gris claro
+  final Color textColor = Color(0xFF6C757D); // Gris medio
+  final Color buttonColor = Color(0xFFFD7E14); // Naranja fuerte
+  final Color secondaryTextColor = Color(0xFF5A9BD5); // Azul claro
 
   @override
   void initState() {
@@ -36,6 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _saveSessionData(User? user) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String usuarioJson = jsonEncode(user?.toJson());
+    // print(usuarioJson);
     await prefs.setString('usuario', usuarioJson);
   }
 
@@ -44,25 +46,25 @@ class _LoginScreenState extends State<LoginScreen> {
     return TextField(
       controller: controller,
       obscureText: isPassword && _obscureText,
-      style: TextStyle(color: textColor, fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: textColor.withOpacity(0.3), width: 1),
+          borderRadius: BorderRadius.circular(10),
+          borderSide:
+              BorderSide(color: Color(0xFFD2B48C), width: 2), // Marrón claro
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: accentColor, width: 2),
         ),
-        labelStyle: TextStyle(color: textColor.withOpacity(0.7), fontSize: 16),
+        labelStyle: TextStyle(color: textColor),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   _obscureText ? Icons.visibility : Icons.visibility_off,
-                  color: textColor.withOpacity(0.5),
+                  color: textColor,
                 ),
                 onPressed: () {
                   setState(() {
@@ -80,53 +82,56 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+/*         title: Text('Acceso Construcción',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), */
+        backgroundColor: primaryColor,
         elevation: 0,
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 32.0, vertical: 20.0),
+          padding: EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(height: 40),
+              SizedBox(height: 20),
               Icon(
-                Icons.person_outline,
-                size: 130,
-                color: Colors.orangeAccent,
+                Icons.architecture,
+                size: 80,
+                color: Color(0xFFA0522D), // Marrón tierra
               ),
               SizedBox(height: 20),
               Text(
-                'Bienvenido',
+                'Bienvenido, Inge',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: textColor,
+                  color: primaryColor,
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 6),
+              SizedBox(height: 10),
               Text(
-                'Inicia sesión para continuar',
+                'Accede a tu cuenta para comenzar',
                 style: TextStyle(
-                  fontSize: 18,
-                  color: textColor.withOpacity(0.6),
+                  fontSize: 16,
+                  color: secondaryTextColor,
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 30),
               _buildTextField(_usuarioController, 'Email'),
-              SizedBox(height: 14),
+              SizedBox(height: 16.0),
               _buildTextField(_passwordController, 'Contraseña',
                   isPassword: true),
-              SizedBox(height: 30),
+              SizedBox(height: 24.0),
               ElevatedButton(
                 onPressed: () {
-                  // Lógica de inicio de sesión
+                  // Aquí iría la lógica de inicio de sesión
                   Future<LoginResponse> response = _httpHelper!
                       .login(_usuarioController.text, _passwordController.text);
                   response.then((value) {
                     if (value.status == 1) {
+                      print("Inicio de sesión exitoso: ${value.message}");
                       _saveSessionData(value.user);
                       Navigator.push(
                         context,
@@ -138,21 +143,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   });
                 },
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 14),
+                  padding: EdgeInsets.symmetric(vertical: 15),
                   child: Text(
                     'Iniciar Sesión',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: buttonColor,
-                  foregroundColor: Colors.white,
+                  //primary: buttonColor,
+                  //onPrimary: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-              SizedBox(height: 18),
+              SizedBox(height: 16.0),
               TextButton(
                 onPressed: () {
                   Navigator.push(
@@ -161,27 +166,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   );
                 },
                 child: Text(
-                  'Registrarse',
+                  'Registrese',
                   style: TextStyle(
-                    color: buttonColor,
-                    fontSize: 18,
+                    color: accentColor,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              SizedBox(height: 10),
+              SizedBox(height: 8.0),
               TextButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => ForgotPasswordPage()),
-                  );
+                  // Aquí iría la lógica para recuperar la contraseña
                 },
                 child: Text(
                   'Olvidé mi contraseña',
                   style: TextStyle(
-                    color: textColor.withOpacity(0.6),
+                    color: secondaryTextColor,
                     fontSize: 16,
                   ),
                 ),

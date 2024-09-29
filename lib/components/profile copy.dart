@@ -34,14 +34,20 @@ class _ProfilePageState extends State<ProfilePage> {
   bool isEditingSocial = false;
 
   List<Social> socialNetworks = [];
+
   File? _image;
   String base64Image = '';
+
+  // Añade esta nueva variable de clase
   OverlayEntry? _overlayEntry;
 
   @override
   void initState() {
     super.initState();
     _httpHelper = HttpHelper();
+    // locationController = TextEditingController();
+    // jobTitleController = TextEditingController();
+    // bioController = TextEditingController();
     _loadUsuario();
   }
 
@@ -98,9 +104,11 @@ class _ProfilePageState extends State<ProfilePage> {
     if (usuarioJson != null) {
       setState(() {
         _user = User.fromJson(jsonDecode(usuarioJson));
+        print(_user?.id);
       });
-      await _initialize();
+      await _initialize(); // Llama a _initialize() después de cargar el usuario
     } else {
+      print('Error: No se encontró información del usuario');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content:
@@ -109,13 +117,33 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // Future<void> _initialize2() async {
+  //   if (_user != null) {
+  //     _user = await _httpHelper?.getUserById(_user!.id);
+  //   }
+  // }
   Future<void> _initialize() async {
-    if (_user == null) return;
+    if (_user == null) {
+      print('Error: User is null in _initialize()');
+      if (mounted) {
+        // Verificar si el widget aún está montado
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Error: No se pudo inicializar la información del usuario')),
+        );
+      }
+      return;
+    }
 
     try {
+      // Primero, intenta obtener la persona existente
       _personResponse = await _httpHelper?.getPersonaByUserId(_user!.id);
 
+      if (!mounted) return; // Si el widget ya no está montado, no continuamos
+
       if (_personResponse?.status == 1 && _personResponse?.persona != null) {
+        // Si la persona existe, actualiza los controladores con la información existente
         setState(() {
           _person = _personResponse?.persona;
           locationController.text = _person?.locacion ?? '';
@@ -124,20 +152,25 @@ class _ProfilePageState extends State<ProfilePage> {
 
           if (_person?.foto_perfil != null && _person!.foto_perfil.isNotEmpty) {
             base64Image = _person!.foto_perfil;
-            _image = File(''); // Crear un archivo vacío
+            _image = File(''); // Creamos un archivo vacío
           }
         });
         await _loadSocialNetworks();
       } else {
+        // Si la persona no existe, NO creamos una nueva automáticamente
+        // En su lugar, solo inicializamos _person como null
         setState(() {
           _person = null;
           locationController.text = '';
           jobTitleController.text = '';
           bioController.text = '';
         });
+        print('No se encontró información de persona para este usuario');
       }
     } catch (e) {
+      print('Error in _initialize(): $e');
       if (mounted) {
+        // Verificar si el widget aún está montado
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text('Error al cargar la información de la persona')),
@@ -156,7 +189,10 @@ class _ProfilePageState extends State<ProfilePage> {
         _image = File(pickedFile.path);
       });
 
+      // Convertir la imagen a base64
       base64Image = await compressAndEncodeImage(_image!);
+
+      // Actualizar la persona con la nueva imagen
       _updateUserInfoWithImage(base64Image);
     }
   }
@@ -165,18 +201,28 @@ class _ProfilePageState extends State<ProfilePage> {
     Uint8List imageBytes = await imageFile.readAsBytes();
     img.Image image = img.decodeImage(imageBytes)!;
 
-    img.Image compressedImage = img.copyResize(image, width: 800);
+    img.Image compressedImage = img.copyResize(image,
+        width: 800); // Ajusta el ancho según tus necesidades
 
-    List<int> compressedBytes = img.encodeJpg(compressedImage, quality: 85);
+    List<int> compressedBytes = img.encodeJpg(compressedImage,
+        quality: 85); // Ajusta la calidad según tus necesidades
 
     return base64Encode(compressedBytes);
   }
 
   void _updateUserInfoWithImage(String base64Image) {
-    if (_user == null) return;
+    if (_user == null) {
+      print('Error: User is null');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: Información de usuario no disponible')),
+      );
+      return;
+    }
 
+    // Primero, verificamos si ya existe una persona para este usuario
     _httpHelper?.getPersonaByUserId(_user!.id).then((response) {
       if (response.status == 1 && response.persona != null) {
+        // Si la persona existe, actualizamos la información existente
         _httpHelper
             ?.actualizarPersona(
           locationController.text,
@@ -184,10 +230,11 @@ class _ProfilePageState extends State<ProfilePage> {
           bioController.text,
           _user!.id,
           response.persona!.id,
-          base64Image,
+          base64Image, // Añadimos la imagen en base64
         )
             .then((updateResponse) {
           if (updateResponse.status == 1) {
+            print('Persona actualizada correctamente');
             setState(() {
               _person = updateResponse.persona;
               isEditing = false;
@@ -195,10 +242,12 @@ class _ProfilePageState extends State<ProfilePage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Información actualizada correctamente')),
             );
+            // Verificar si la información básica está completa
             if (_isBasicInfoComplete() && socialNetworks.isEmpty) {
               _addSocialNetwork();
             }
           } else {
+            print('Error al actualizar persona: ${updateResponse.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                   content: Text(
@@ -207,16 +256,18 @@ class _ProfilePageState extends State<ProfilePage> {
           }
         });
       } else {
+        // Si la persona no existe, creamos una nueva
         _httpHelper
             ?.registrarPersona(
           locationController.text,
           jobTitleController.text,
           bioController.text,
           _user!.id,
-          base64Image,
+          base64Image, // Añadimos la imagen en base64
         )
             .then((createResponse) {
           if (createResponse.status == 1) {
+            print('Nueva persona creada correctamente');
             setState(() {
               _person = createResponse.persona;
               isEditing = false;
@@ -225,6 +276,7 @@ class _ProfilePageState extends State<ProfilePage> {
               SnackBar(content: Text('Información creada correctamente')),
             );
           } else {
+            print('Error al crear persona: ${createResponse.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                   content: Text(
@@ -243,7 +295,7 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       birthDate = DateTime.parse(_user!.fechaNacimiento);
     } catch (e) {
-      return 'Formato de fecha inválido';
+      return 'Invalid date format';
     }
     final age = now.difference(birthDate);
     final years = age.inDays ~/ 365;
@@ -268,15 +320,15 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
+      statusBarColor: Colors.transparent, // o cualquier color que prefieras
+      statusBarIconBrightness: Brightness.dark, // para iconos oscuros
     ));
     return Scaffold(
-      backgroundColor: Colors.white, // Fondo blanco para una apariencia limpia
+      backgroundColor: Color(0xFFE9ECEF),
       appBar: AppBar(
         elevation: 0,
-        automaticallyImplyLeading: false,
-        toolbarHeight: 0,
+        automaticallyImplyLeading: false, // Esto quita el botón de retroceso
+        toolbarHeight: 0, // Esto hace que el AppBar sea invisible
         systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
       body: SingleChildScrollView(
@@ -294,6 +346,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildBioSection(),
                   SizedBox(height: 20),
                   if (_isBasicInfoComplete()) _buildSocialSection(),
+                  // SizedBox(height: 20),
+                  // _buildRecentActivitySection(),
                 ],
               ),
             ),
@@ -306,65 +360,67 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF4A4E69), Color(0xFF9A8C98)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      padding: EdgeInsets.all(16),
-      child: SafeArea(
-        child: Row(
-          children: [
-            GestureDetector(
-              onTap: _pickImage,
-              onLongPress: _showProfileImage,
-              child: Hero(
-                tag: 'profileImage',
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      image: _getProfileImage() ??
-                          AssetImage('assets/default_profile.png'),
-                      fit: BoxFit.cover,
-                    ),
-                    border: Border.all(color: Colors.white, width: 4),
-                  ),
-                  child: _getProfileImage() == null
-                      ? Icon(Icons.person, size: 50, color: Colors.white)
-                      : null,
-                ),
-              ),
-            ),
-            SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Row(
                 children: [
-                  Text(
-                    _user?.nombre ?? '',
-                    style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    onLongPress: _showProfileImage, // Añade esta línea
+                    child: Hero(
+                      tag: 'profileImage',
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          image: DecorationImage(
+                            image: _getProfileImage() ??
+                                AssetImage('assets/default_profile.png'),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        child: _getProfileImage() == null
+                            ? Icon(Icons.person,
+                                size: 50, color: Color(0xFF6C757D))
+                            : null,
+                      ),
+                    ),
                   ),
-                  Text(
-                    _user?.user ?? '',
-                    style: TextStyle(fontSize: 16, color: Colors.white70),
+                  SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _user?.nombre ?? '',
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color.fromARGB(255, 0, 0, 0)),
+                        ),
+                        Text(
+                          _user?.user ?? '',
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: Color.fromARGB(255, 0, 0, 0)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.exit_to_app,
+                        color: Color.fromARGB(255, 163, 8, 8)),
+                    onPressed: _logout,
+                    tooltip: 'Cerrar sesión',
                   ),
                 ],
               ),
-            ),
-            IconButton(
-              icon: Icon(Icons.exit_to_app, color: Colors.redAccent),
-              onPressed: _logout,
-              tooltip: 'Cerrar sesión',
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -398,10 +454,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget buildAboutSection() {
     return Card(
-      elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: Colors.white,
+      elevation: 2,
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -412,9 +465,9 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text('Sobre Mí',
                     style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4E69))),
+                        color: Color(0xFFA0522D))),
                 TextButton(
                   onPressed: () {
                     if (isEditing) {
@@ -453,7 +506,7 @@ class _ProfilePageState extends State<ProfilePage> {
           isEditing
               ? TextField(
                   controller: locationController,
-                  style: TextStyle(color: Color(0xFF4A4E69)),
+                  style: TextStyle(color: Color(0xFF6C757D)),
                   decoration: InputDecoration(
                     hintText: 'La Molina, Lima',
                     hintStyle:
@@ -470,7 +523,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   locationController.text.isNotEmpty
                       ? locationController.text
                       : 'No hay información de locación',
-                  style: TextStyle(color: Color(0xFF4A4E69)),
+                  style: TextStyle(color: Color(0xFF6C757D)),
                 ),
         ],
       ),
@@ -488,7 +541,7 @@ class _ProfilePageState extends State<ProfilePage> {
           isEditing
               ? TextField(
                   controller: jobTitleController,
-                  style: TextStyle(color: Color(0xFF4A4E69)),
+                  style: TextStyle(color: Color(0xFF6C757D)),
                   decoration: InputDecoration(
                     hintText: 'Ingeniero de Software',
                     hintStyle:
@@ -505,7 +558,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   jobTitleController.text.isNotEmpty
                       ? jobTitleController.text
                       : 'No hay información de profesión',
-                  style: TextStyle(color: Color(0xFF4A4E69)),
+                  style: TextStyle(color: Color(0xFF6C757D)),
                 ),
         ],
       ),
@@ -513,10 +566,18 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _updateUserInfo() {
-    if (_user == null) return;
+    if (_user == null) {
+      print('Error: User is null');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: Información de usuario no disponible')),
+      );
+      return;
+    }
 
+    // Primero, verificamos si ya existe una persona para este usuario
     _httpHelper?.getPersonaByUserId(_user!.id).then((response) {
       if (response.status == 1 && response.persona != null) {
+        // Si la persona existe, actualizamos la información existente
         _httpHelper
             ?.actualizarPersona(
           locationController.text,
@@ -528,6 +589,7 @@ class _ProfilePageState extends State<ProfilePage> {
         )
             .then((updateResponse) {
           if (updateResponse.status == 1) {
+            print('Persona actualizada correctamente');
             setState(() {
               _person = updateResponse.persona;
               isEditing = false;
@@ -535,10 +597,12 @@ class _ProfilePageState extends State<ProfilePage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Información actualizada correctamente')),
             );
+            // Verificar si la información básica está completa
             if (_isBasicInfoComplete() && socialNetworks.isEmpty) {
               _addSocialNetwork();
             }
           } else {
+            print('Error al actualizar persona: ${updateResponse.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                   content: Text(
@@ -547,6 +611,7 @@ class _ProfilePageState extends State<ProfilePage> {
           }
         });
       } else {
+        // Si la persona no existe, creamos una nueva
         _httpHelper
             ?.registrarPersona(
           locationController.text,
@@ -557,6 +622,7 @@ class _ProfilePageState extends State<ProfilePage> {
         )
             .then((createResponse) {
           if (createResponse.status == 1) {
+            print('Nueva persona creada correctamente');
             setState(() {
               _person = createResponse.persona;
               isEditing = false;
@@ -565,6 +631,7 @@ class _ProfilePageState extends State<ProfilePage> {
               SnackBar(content: Text('Información creada correctamente')),
             );
           } else {
+            print('Error al crear persona: ${createResponse.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                   content: Text(
@@ -584,10 +651,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildBioSection() {
     return Card(
-      elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: Colors.white,
+      elevation: 2,
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -598,9 +662,9 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text('Área',
                     style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4E69))),
+                        color: Color(0xFFA0522D))),
                 TextButton(
                   onPressed: () {
                     if (isEditing) {
@@ -622,7 +686,7 @@ class _ProfilePageState extends State<ProfilePage> {
             isEditing
                 ? TextField(
                     controller: bioController,
-                    style: TextStyle(color: Color(0xFF4A4E69)),
+                    style: TextStyle(color: Color(0xFF6C757D)),
                     maxLines: null,
                     decoration: InputDecoration(
                       hintText: 'Escribe algo sobre ti...',
@@ -640,7 +704,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     bioController.text.isNotEmpty
                         ? bioController.text
                         : 'No hay información de bio',
-                    style: TextStyle(color: Color(0xFF4A4E69)),
+                    style: TextStyle(color: Color(0xFF6C757D)),
                   ),
           ],
         ),
@@ -656,11 +720,13 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() {
           socialNetworks = response.socialNetworks ?? [];
         });
-        _saveSocialNetworksLocally();
+        _saveSocialNetworksLocally(); // Actualiza la caché local
       } else {
+        // Si la API falla, intenta cargar desde la caché local
         await _loadSocialNetworksFromLocal();
       }
     } catch (e) {
+      print('Error al cargar redes sociales: $e');
       await _loadSocialNetworksFromLocal();
     }
   }
@@ -679,10 +745,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildSocialSection() {
     return Card(
-      elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: Colors.white,
+      elevation: 2,
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -693,9 +756,9 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text('Redes Sociales',
                     style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A4E69))),
+                        color: Color(0xFFA0522D))),
                 TextButton(
                   onPressed: () {
                     if (isEditingSocial) {
@@ -748,7 +811,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   )
                 : Text(
                     network.nombre,
-                    style: TextStyle(color: Color(0xFF4A4E69)),
+                    style: TextStyle(color: Color(0xFF6C757D)),
                   ),
           ),
           if (isEditingSocial)
@@ -769,11 +832,14 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
+    // Añadir 'https://' si no está presente
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://$url';
     }
 
+    // ignore: deprecated_member_use
     if (await canLaunch(url)) {
+      // ignore: deprecated_member_use
       await launch(url);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -784,7 +850,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _addSocialNetwork() {
     setState(() {
-      socialNetworks.add(Social(id: 0, nombre: '', personaId: 0));
+      socialNetworks.add(Social(
+          id: 0,
+          nombre: '',
+          personaId: 0)); // El personaId se asignará en el backend
     });
   }
 
@@ -808,6 +877,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       }
     } catch (e) {
+      print('Error al eliminar la red social: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al eliminar la red social')),
       );
@@ -815,18 +885,27 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _updateSocialInfo() {
-    if (_user == null) return;
+    if (_user == null) {
+      print('Error: User is null');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: Información de usuario no disponible')),
+      );
+      return;
+    }
 
+    // Filtrar redes sociales vacías
     socialNetworks =
         socialNetworks.where((network) => network.nombre.isNotEmpty).toList();
 
+    // Actualizar redes sociales
     _httpHelper
         ?.actualizarRedesSociales(
-      _user!.id,
+      _user!.id, // Usar el ID del usuario en lugar del ID de la persona
       socialNetworks,
     )
         .then((response) {
       if (response.status == 1) {
+        print('Redes sociales actualizadas correctamente');
         setState(() {
           isEditingSocial = false;
           socialNetworks = response.socialNetworks ?? [];
@@ -837,6 +916,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
         _loadSocialNetworks();
       } else {
+        print('Error al actualizar redes sociales: ${response.message}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
@@ -848,10 +928,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildRecentActivitySection() {
     return Card(
-      elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: Colors.white,
+      elevation: 2,
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(

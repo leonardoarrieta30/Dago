@@ -34,24 +34,26 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onItemTapped,
-        backgroundColor: Colors.black, // Fondo de la barra de navegación
-        selectedItemColor: Colors.orangeAccent, // Color del ítem seleccionado
-        unselectedItemColor:
-            Colors.white70, // Color de los ítems no seleccionados
+        backgroundColor: Colors.grey[200],
+        selectedItemColor: Colors.black87,
+        unselectedItemColor: Colors.grey,
         selectedFontSize: 16,
         unselectedFontSize: 14,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_rounded),
+            icon: Icon(Icons
+                .dashboard_rounded), // Icono más moderno para la página de inicio
             label: 'Inicio',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.file_upload),
+            icon: Icon(Icons
+                .file_upload_outlined), // Icono más moderno para la subida de archivos
             label: 'Subir',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle_rounded),
+            icon: Icon(Icons
+                .account_circle_rounded), // Icono más moderno para el perfil
             label: 'Perfil',
           ),
         ],

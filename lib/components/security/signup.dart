@@ -18,13 +18,12 @@ class _SignupPageState extends State<SignupPage> {
 
   HttpHelper? _httpHelper;
 
-  // Paleta de colores
-  final Color primaryColor = Color(0xFF007BFF); // Azul fuerte
-  final Color accentColor = Color(0xFF28A745); // Verde fuerte
-  final Color backgroundColor = Color(0xFFE9ECEF); // Gris claro
-  final Color textColor = Color(0xFF6C757D); // Gris medio
-  final Color buttonColor = Color(0xFFFD7E14); // Naranja fuerte
-  final Color secondaryTextColor = Color(0xFF5A9BD5); // Azul claro
+  // Modern and attractive color palette
+  final Color primaryColor = Color(0xFF3B82F6); // Sky blue
+  final Color accentColor = Color(0xFFEC4899); // Pink
+  final Color backgroundColor = Color(0xFFF3F4F6); // Light grey
+  final Color textColor = Color(0xFF111827); // Dark grey
+  final Color buttonColor = Color(0xFF10B981); // Green
 
   initialize() async {}
 
@@ -35,23 +34,29 @@ class _SignupPageState extends State<SignupPage> {
     super.initState();
   }
 
-  Widget _buildTextField(TextEditingController controller, String label) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide:
-              BorderSide(color: Color(0xFFD2B48C), width: 2), // Marrón claro
+  Widget _buildTextField(TextEditingController controller, String label,
+      {bool isPassword = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        obscureText: isPassword,
+        style: TextStyle(color: textColor, fontSize: 16),
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: textColor.withOpacity(0.3), width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: primaryColor, width: 2),
+          ),
+          labelStyle:
+              TextStyle(color: textColor.withOpacity(0.7), fontSize: 16),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: accentColor, width: 2),
-        ),
-        labelStyle: TextStyle(color: textColor),
       ),
     );
   }
@@ -85,121 +90,121 @@ class _SignupPageState extends State<SignupPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text('Registro',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: primaryColor,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
+      body: Center(
+        child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 20),
-              Icon(
-                Icons.person_add,
-                size: 80,
-                color: Color(0xFFA0522D), // Marrón tierra
-              ),
               SizedBox(height: 20),
-              Text(
-                'Crear Cuenta',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
-                textAlign: TextAlign.center,
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Registrate',
+                    style: TextStyle(
+                      fontSize: 35,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
               SizedBox(height: 10),
               Text(
                 'Complete sus datos para registrarse',
                 style: TextStyle(
-                  fontSize: 16,
-                  color: secondaryTextColor,
+                  fontSize: 18,
+                  color: textColor.withOpacity(0.6),
                 ),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 30),
-              _buildTextField(_nombreController, 'Nombre'),
-              SizedBox(height: 16.0),
-              _buildTextField(_apellidoController, 'Apellido'),
-              SizedBox(height: 16.0),
-              _buildTextField(_usuarioController, 'Email'),
-              SizedBox(height: 16.0),
-              _buildTextField(_passwordController, 'Contraseña'),
-              SizedBox(height: 16.0),
-              _buildTextField(_dniController, 'DNI'),
-              SizedBox(height: 16.0),
-              GestureDetector(
-                onTap: () => _selectDate(context),
-                child: AbsorbPointer(
-                  child: _buildTextField(
-                      _fechaNacimientoController, 'Fecha de Nacimiento'),
-                ),
-              ),
-              SizedBox(height: 24.0),
-              ElevatedButton(
-                onPressed: () {
-                  // Aquí iría la lógica de registro
-                  Future<LoginResponse> response = _httpHelper!.crearUsuario(
-                    _usuarioController.text,
-                    _passwordController.text,
-                    _nombreController.text,
-                    _apellidoController.text,
-                    _fechaNacimientoController.text,
-                    _dniController.text,
-                  );
-
-                  response.then((value) {
-                    if (value.status == 1) {
-                      Navigator.pop(context);
-                    } else if (value.status == 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(value.message),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error al registrar el usuario'),
-                        backgroundColor: Colors.red,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Column(
+                  children: [
+                    _buildTextField(_nombreController, 'Nombre'),
+                    _buildTextField(_apellidoController, 'Apellido'),
+                    _buildTextField(_usuarioController, 'Email'),
+                    _buildTextField(_passwordController, 'Contraseña',
+                        isPassword: true),
+                    _buildTextField(_dniController, 'DNI'),
+                    GestureDetector(
+                      onTap: () => _selectDate(context),
+                      child: AbsorbPointer(
+                        child: _buildTextField(
+                            _fechaNacimientoController, 'Fecha de Nacimiento'),
                       ),
-                    );
-                  });
-                },
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                  child: Text(
-                    'Registrarse',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  //primary: buttonColor,
-                  //onPrimary: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16.0),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text(
-                  'Ya tengo una cuenta',
-                  style: TextStyle(
-                    color: accentColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                    ),
+                    SizedBox(height: 30),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Aquí iría la lógica de registro
+                        Future<LoginResponse> response =
+                            _httpHelper!.crearUsuario(
+                          _usuarioController.text,
+                          _passwordController.text,
+                          _nombreController.text,
+                          _apellidoController.text,
+                          _fechaNacimientoController.text,
+                          _dniController.text,
+                        );
+
+                        response.then((value) {
+                          if (value.status == 1) {
+                            Navigator.pop(context);
+                          } else if (value.status == 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(value.message),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }).catchError((error) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error al registrar el usuario'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        });
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        child: Text(
+                          'Registrarse',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: buttonColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 18),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Ya tengo una cuenta',
+                        style: TextStyle(
+                          color: buttonColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
