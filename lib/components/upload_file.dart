@@ -978,7 +978,8 @@ class _UploadFileState extends State<UploadFile> {
                       )
                     else
                       Container(
-                        height: 250, // Ajusta esta altura según tus necesidades
+                        height: MediaQuery.of(context).size.height *
+                            0.42, // Ajusta esta altura según tus necesidades
                         child: ListView.builder(
                           itemCount: _recentPDFs.length,
                           itemBuilder: (context, index) {

@@ -5,7 +5,9 @@ import 'dart:typed_data';
 import 'package:another_flushbar/flushbar.dart';
 import 'package:dago_application/data/remote/http_helper.dart';
 import 'package:dago_application/models/document.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -168,58 +170,94 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _saveAndOpenPDF(String base64String, String fileName) async {
-    // Solicitar permisos de almacenamiento
-    var status = await Permission.storage.request();
-    if (status.isGranted) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        // Decodificar el string base64
-        Uint8List bytes = base64Decode(base64String);
-
-        // Obtener el directorio de documentos
-        Directory? appDocDir = await getExternalStorageDirectory();
-        String filePath = '${appDocDir!.path}/$fileName';
-
-        // Escribir el archivo
-        File file = File(filePath);
-        await file.writeAsBytes(bytes);
-
-        setState(() {
-          _isLoading = false;
-        });
-
-        // Abrir el archivo
-        await OpenFile.open(filePath);
-      } catch (e) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al procesar el documento: $e')),
-        );
+  Future<void> _checkAndRequestPermissions() async {
+    if (Platform.isAndroid) {
+      // Para Android 11+ necesitas el permiso MANAGE_EXTERNAL_STORAGE
+      if (await Permission.manageExternalStorage.isDenied ||
+          await Permission.manageExternalStorage.isPermanentlyDenied) {
+        var status = await Permission.manageExternalStorage.request();
+        if (status.isGranted) {
+          // Permiso concedido
+        } else {
+          // Permiso denegado
+          _showPermissionDeniedMessage();
+        }
       }
     } else {
+      // Para Android 10 o inferior usa los permisos de almacenamiento
+      if (await Permission.storage.isDenied ||
+          await Permission.storage.isPermanentlyDenied) {
+        var status = await Permission.storage.request();
+        if (status.isGranted) {
+          // Permiso concedido
+        } else {
+          // Permiso denegado
+          _showPermissionDeniedMessage();
+        }
+      }
+    }
+  }
+
+  void _showPermissionDeniedMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            'Se requieren permisos de almacenamiento para guardar el documento.'),
+      ),
+    );
+  }
+
+  Future<void> _saveAndOpenPDF(String base64String, String fileName) async {
+    // Solicitar permisos de almacenamiento
+    await _checkAndRequestPermissions(); // Método que acabamos de implementar
+
+    try {
+      // Decodificar el string base64
+      Uint8List bytes = base64Decode(base64String);
+
+      // Obtener el directorio de almacenamiento externo permitido
+      Directory? appDocDir;
+      if (Platform.isAndroid &&
+          (await Permission.manageExternalStorage.isGranted)) {
+        appDocDir = await getExternalStorageDirectory();
+      } else {
+        appDocDir = await getApplicationDocumentsDirectory();
+      }
+
+      // Asegúrate de que el directorio exista
+      if (appDocDir != null && !await appDocDir.exists()) {
+        await appDocDir.create(recursive: true);
+      }
+
+      // Crear la ruta completa del archivo
+      String filePath = '${appDocDir!.path}/$fileName';
+
+      // Escribir el archivo en el sistema de archivos
+      File file = File(filePath);
+      await file.writeAsBytes(bytes);
+
+      // Abrir el archivo usando OpenFile
+      await OpenFile.open(filePath);
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Se requieren permisos de almacenamiento para guardar el documento')),
+        SnackBar(content: Text('Error al procesar el documento: $e')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+    ));
     return Scaffold(
-      /*     appBar: AppBar(
-        backgroundColor:
-            Colors.black, // Fondo del AppBar igual al de la barra de navegación
-        automaticallyImplyLeading: false, // Esto quita la flecha de retroceso
-        toolbarHeight: 35.0,
-      ), */
+      appBar: AppBar(
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        toolbarHeight: 0,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+      ),
       backgroundColor: Colors.white, // Fondo blanco para una apariencia limpia
       body: SafeArea(
         child: Padding(

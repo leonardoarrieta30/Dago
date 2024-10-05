@@ -326,9 +326,32 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemBuilder: (context, index) {
                           final result = _searchResults[index];
                           return GestureDetector(
-                            onTap: () {
-                              _saveAndOpenPDF(result.documentoBase64,
-                                  '${result.titulo}.pdf');
+                            onTap: () async {
+                              showDialog(
+                                context: context,
+                                barrierDismissible:
+                                    false, // No permitir cerrar el diálogo al hacer clic fuera
+                                builder: (BuildContext context) {
+                                  return Center(
+                                    child:
+                                        CircularProgressIndicator(), // Indicador de carga
+                                  );
+                                },
+                              );
+                              // Obtener el base64 del documento al hacer clic
+                              String? base64 = await _httpHelper!
+                                  .getDocumentoBase64(result.id);
+                              // Cerrar el diálogo después de obtener la respuesta
+                              Navigator.of(context).pop();
+                              if (base64 != null) {
+                                _saveAndOpenPDF(base64, '${result.titulo}.pdf');
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text(
+                                          'Error al obtener el documento')),
+                                );
+                              }
                             },
                             child: Container(
                               margin: EdgeInsets.only(bottom: 10),
