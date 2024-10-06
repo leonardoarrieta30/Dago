@@ -88,7 +88,10 @@ class _UploadFileState extends State<UploadFile> {
 
   Future<void> _loadPDFs() async {
     if (_user != null && _httpHelper != null) {
-      setState(() => _isLoadingPDFs = true);
+      if (mounted) {
+        setState(() => _isLoadingPDFs = true);
+      }
+
       try {
         print('Loading PDFs for user ID: ${_user!.id}');
         final recentDocs = await _httpHelper!.getDocumentosByUserId(_user!.id);

@@ -554,6 +554,7 @@ class HttpHelper {
       final Uri uri =
           Uri.parse(queryParams.isNotEmpty ? '$url?$queryParams' : url);
 
+      print('URL de la solicitud: $uri');
       final response = await http.get(
         uri,
         headers: <String, String>{
