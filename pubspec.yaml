@@ -41,6 +41,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/engineering.png
+    - assets/images/ingeniero2r.png
   fonts: 
     - family: KronaOne
       fonts:

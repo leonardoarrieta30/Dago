@@ -90,10 +90,11 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(height: 40),
-              Icon(
-                Icons.person_outline,
-                size: 130,
-                color: Colors.orangeAccent,
+              Image.asset(
+                'assets/images/ingeniero2r.png', // Ruta de la imagen en tus assets
+                height: 130, // Tamaño de la imagen
+                width: 130, // Tamaño de la imagen
+                fit: BoxFit.contain, // Ajuste de la imagen (opcional)
               ),
               SizedBox(height: 20),
               Text(

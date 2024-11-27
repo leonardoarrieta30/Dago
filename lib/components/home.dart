@@ -291,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              /* Text(
                 "${_getGreeting()}, $_userName!",
                 style: TextStyle(
                   fontSize: 28, // Aumentar el tamaño de la fuente
@@ -300,8 +300,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontFamily:
                       'Montserrat', // Usar una fuente moderna y estilizada
                 ),
+              ), */
+              SizedBox(height: 7),
+              Align(
+                alignment: Alignment.center, // Centra el texto en ambos ejes
+                child: Text(
+                  "INCIDENCIAS",
+                  style: TextStyle(
+                    fontSize: 28, // Aumentar el tamaño de la fuente
+                    fontWeight: FontWeight.bold,
+                    color: const Color.fromARGB(221, 0, 0, 0),
+                    fontFamily:
+                        'Montserrat', // Usar una fuente moderna y estilizada
+                  ),
+                ),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 10),
               TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
