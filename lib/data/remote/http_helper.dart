@@ -12,7 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class HttpHelper {
-  final String urlBase = 'http://192.168.18.213:8080/api/v1';
+  final String urlBase = 'http://137.184.228.142:3000/api/v1';
 
   Future<Person> getPersonById(int id) async {
     final response = await http.get(Uri.parse('$urlBase/personas/$id'));
@@ -652,6 +652,32 @@ class HttpHelper {
       }
     } else {
       throw Exception('Error en la solicitud: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> hasArea(int usuarioId) async {
+    final response = await http.get(
+      Uri.parse('$urlBase/personas/hasArea/$usuarioId'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      return {
+        'hasArea': data['hasArea'],
+        'status': data['status'],
+        'message': data['message'],
+      };
+    } else if (response.statusCode == 404) {
+      return {
+        'hasArea': false,
+        'status': 2,
+        'message': 'Persona no encontrada',
+      };
+    } else {
+      throw Exception('Error al verificar el área: ${response.statusCode}');
     }
   }
 }

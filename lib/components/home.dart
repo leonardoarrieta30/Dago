@@ -201,8 +201,34 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showPermissionDeniedMessage() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-            'Se requieren permisos de almacenamiento para guardar el documento.'),
+        content: Row(
+          children: [
+            Icon(Icons.lock,
+                color: Colors.white), // Ícono de advertencia o bloqueo
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Se requieren permisos de almacenamiento para guardar el documento.',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.orangeAccent, // Cambiar el color de fondo
+        behavior: SnackBarBehavior.floating, // Hacer que el SnackBar flote
+        margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10), // Bordes redondeados
+        ),
+        // action: SnackBarAction(
+        //   label: 'Permitir',
+        //   textColor: Colors.white, // Color del texto de la acción
+        //   onPressed: () {
+        //     // Lógica para solicitar permisos
+        //   },
+        // ),
+        duration:
+            Duration(seconds: 4), // Mantener el SnackBar visible por 4 segundos
       ),
     );
   }

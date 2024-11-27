@@ -156,6 +156,36 @@ class _SignupPageState extends State<SignupPage> {
 
                         response.then((value) {
                           if (value.status == 1) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(Icons.check_circle,
+                                        color: Colors.white), // Ícono de éxito
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Registro exitoso. Bienvenido!',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: Colors
+                                    .green, // Color verde para indicar éxito
+                                behavior: SnackBarBehavior
+                                    .floating, // Hacer que el SnackBar flote
+                                margin: EdgeInsets.all(
+                                    16), // Margen alrededor del SnackBar
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      10), // Bordes redondeados
+                                ),
+                                duration: Duration(
+                                    seconds: 3), // Duración de 3 segundos
+                              ),
+                            );
+
                             Navigator.pop(context);
                           } else if (value.status == 0) {
                             ScaffoldMessenger.of(context).showSnackBar(

@@ -320,7 +320,30 @@ class _UploadFileState extends State<UploadFile> {
             });
 
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('PDF eliminado con éxito')),
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.delete_forever,
+                        color: Colors.white), // Ícono de eliminación
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'PDF eliminado con éxito',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors
+                    .redAccent, // Color de fondo rojo para indicar eliminación
+                behavior:
+                    SnackBarBehavior.floating, // Hacer que el SnackBar flote
+                margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10), // Bordes redondeados
+                ),
+                duration: Duration(seconds: 3), // Duración de 3 segundos
+              ),
             );
           } catch (e) {
             print('Error al eliminar el PDF: $e');
@@ -341,7 +364,29 @@ class _UploadFileState extends State<UploadFile> {
       if (!mounted) return null;
       if (_images.isEmpty) {
         _scaffoldKey.currentState?.showSnackBar(
-          SnackBar(content: Text('No hay fotos para generar el PDF')),
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.photo,
+                    color: Colors.white), // Ícono que representa fotos
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'No hay fotos para generar el PDF',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors
+                .orangeAccent, // Color de fondo para destacar la advertencia
+            behavior: SnackBarBehavior.floating, // Hacer que el SnackBar flote
+            margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // Bordes redondeados
+            ),
+            duration: Duration(seconds: 3), // Duración de 3 segundos
+          ),
         );
         return null;
       }

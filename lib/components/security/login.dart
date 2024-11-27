@@ -128,6 +128,38 @@ class _LoginScreenState extends State<LoginScreen> {
                   response.then((value) {
                     if (value.status == 1) {
                       _saveSessionData(value.user);
+
+// Mostrar SnackBar de inicio de sesión exitoso
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle,
+                                  color: Colors.white), // Ícono de éxito
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Inicio de sesión exitoso. Bienvenido!',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor:
+                              Colors.green, // Color verde para indicar éxito
+                          behavior: SnackBarBehavior
+                              .floating, // Hacer que el SnackBar flote
+                          margin: EdgeInsets.all(
+                              16), // Margen alrededor del SnackBar
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(10), // Bordes redondeados
+                          ),
+                          duration:
+                              Duration(seconds: 3), // Duración de 3 segundos
+                        ),
+                      );
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => HomePage()),

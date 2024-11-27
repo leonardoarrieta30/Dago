@@ -1,3 +1,4 @@
+import 'package:dago_application/components/profile.dart';
 import 'package:dago_application/data/remote/http_helper.dart';
 import 'package:dago_application/models/document.dart';
 import 'package:dago_application/models/user.dart';
@@ -238,6 +239,46 @@ class _UploadFileState extends State<UploadFile> {
     }
 
     Future<void> _takePicture(ImageSource source) async {
+      final hasAreaResponse = await _httpHelper?.hasArea(_user!.id);
+      if (hasAreaResponse == null || !hasAreaResponse['hasArea']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.white),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Por favor, indique su área en tu perfil antes de subir una foto',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // Bordes redondeados
+            ),
+            // action: SnackBarAction(
+            //   label: 'Entendido',
+            //   textColor: Colors.white, // Color del botón de acción
+            //   onPressed: () {
+            //     // Lógica que se ejecuta cuando se presiona el botón
+            //     // Navigator.push(
+            //     //   context,
+            //     //   MaterialPageRoute(builder: (context) => ProfilePage()),
+            //     // );
+            //   },
+            // ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        return;
+      }
+
       final ImagePicker _picker = ImagePicker();
       final XFile? photo = await _picker.pickImage(source: source);
 
@@ -387,9 +428,31 @@ class _UploadFileState extends State<UploadFile> {
             setState(() {
               _recentPDFs.removeWhere((pdf) => pdf.id == documentId);
             });
-
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('PDF eliminado con éxito')),
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.delete_forever,
+                        color: Colors.white), // Ícono de eliminación
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'PDF eliminado con éxito',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors
+                    .redAccent, // Color de fondo rojo para indicar eliminación
+                behavior:
+                    SnackBarBehavior.floating, // Hacer que el SnackBar flote
+                margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10), // Bordes redondeados
+                ),
+                duration: Duration(seconds: 3), // Duración de 3 segundos
+              ),
             );
           } catch (e) {
             print('Error al eliminar el PDF: $e');
@@ -410,10 +473,33 @@ class _UploadFileState extends State<UploadFile> {
       if (!mounted) return null;
       if (_images.isEmpty) {
         _scaffoldKey.currentState?.showSnackBar(
-          SnackBar(content: Text('No hay fotos para generar el documento')),
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.photo_library,
+                    color: Colors.white), // Ícono representando fotos
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'No hay fotos para generar el documento',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors
+                .deepOrangeAccent, // Fondo naranja para resaltar la advertencia
+            behavior: SnackBarBehavior.floating, // Hacer que el SnackBar flote
+            margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // Bordes redondeados
+            ),
+            duration: Duration(seconds: 3), // Duración de 3 segundos
+          ),
         );
         return null;
       }
+
       setState(() => _isGeneratingPDF = true);
 
       try {
@@ -550,8 +636,29 @@ class _UploadFileState extends State<UploadFile> {
         }
         Navigator.of(context).pop();
         _scaffoldKey.currentState?.showSnackBar(
-          // Usa _scaffoldKey
-          SnackBar(content: Text('PDF generado: ${file.path}')),
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.picture_as_pdf,
+                    color: Colors.white), // Ícono representando un PDF
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'PDF generado: ${file.path}',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors
+                .blueAccent, // Fondo azul para destacar la acción completada
+            behavior: SnackBarBehavior.floating, // Hacer que el SnackBar flote
+            margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // Bordes redondeados
+            ),
+            duration: Duration(seconds: 4), // Duración de 4 segundos
+          ),
         );
 
         return file.path;
@@ -670,7 +777,29 @@ class _UploadFileState extends State<UploadFile> {
         // });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Primero debes generar el PDF')),
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.picture_as_pdf,
+                    color: Colors.white), // Ícono representando un PDF
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Primero debes generar el PDF',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors
+                .blueAccent, // Fondo azul para destacar la acción pendiente
+            behavior: SnackBarBehavior.floating, // Hacer que el SnackBar flote
+            margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // Bordes redondeados
+            ),
+            duration: Duration(seconds: 3), // Duración de 3 segundos
+          ),
         );
       }
     }
@@ -697,7 +826,28 @@ class _UploadFileState extends State<UploadFile> {
           // await prefs.setString('cached_docs', jsonEncode(_recentPDFs));
         }
         _scaffoldKey.currentState?.showSnackBar(
-          SnackBar(content: Text('PDF guardado en la base de datos y caché')),
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.save_alt,
+                    color: Colors.white), // Ícono representando guardar
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'PDF guardado en la base de datos y caché',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green, // Fondo verde para indicar éxito
+            behavior: SnackBarBehavior.floating, // Hacer que el SnackBar flote
+            margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // Bordes redondeados
+            ),
+            duration: Duration(seconds: 3), // Duración de 3 segundos
+          ),
         );
       } catch (e) {
         _scaffoldKey.currentState?.showSnackBar(

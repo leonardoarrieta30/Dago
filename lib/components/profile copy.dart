@@ -240,8 +240,32 @@ class _ProfilePageState extends State<ProfilePage> {
               isEditing = false;
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Información actualizada correctamente')),
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.update,
+                        color: Colors.white), // Ícono de actualización
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Información actualizada correctamente',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors
+                    .blue, // Color de fondo azul para indicar actualización
+                behavior:
+                    SnackBarBehavior.floating, // Hacer que el SnackBar flote
+                margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10), // Bordes redondeados
+                ),
+                duration: Duration(seconds: 3), // Duración de 3 segundos
+              ),
             );
+
             // Verificar si la información básica está completa
             if (_isBasicInfoComplete() && socialNetworks.isEmpty) {
               _addSocialNetwork();
@@ -273,7 +297,30 @@ class _ProfilePageState extends State<ProfilePage> {
               isEditing = false;
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Información creada correctamente')),
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle,
+                        color: Colors.white), // Ícono de éxito
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Información creada correctamente',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor:
+                    Colors.green, // Color de fondo verde para indicar éxito
+                behavior:
+                    SnackBarBehavior.floating, // Hacer que el SnackBar flote
+                margin: EdgeInsets.all(16), // Margen alrededor del SnackBar
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10), // Bordes redondeados
+                ),
+                duration: Duration(seconds: 3), // Duración de 3 segundos
+              ),
             );
           } else {
             print('Error al crear persona: ${createResponse.message}');
